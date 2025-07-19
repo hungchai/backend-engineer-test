@@ -1,0 +1,330 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: utxo-indexer-api
+    url: http://utxo-api-1:3000
+    tags:
+      - utxo
+      - blockchain
+    connect_timeout: 5000
+    write_timeout: 60000
+    read_timeout: 60000
+
+  - name: utxo-indexer-api-2
+    url: http://utxo-api-2:3000
+    tags:
+      - utxo
+      - blockchain
+    connect_timeout: 5000
+    write_timeout: 60000
+    read_timeout: 60000
+
+  - name: utxo-indexer-api-3
+    url: http://utxo-api-3:3000
+    tags:
+      - utxo
+      - blockchain
+    connect_timeout: 5000
+    write_timeout: 60000
+    read_timeout: 60000
+
+upstreams:
+  - name: utxo-cluster
+    algorithm: least-connections
+    healthchecks:
+      active:
+        type: http
+        http_path: /health
+        healthy:
+          interval: 10
+          successes: 2
+        unhealthy:
+          interval: 10
+          http_failures: 3
+          timeouts: 3
+    targets:
+      - target: utxo-api-1:3000
+        weight: 100
+      - target: utxo-api-2:3000
+        weight: 100
+      - target: utxo-api-3:3000
+        weight: 100
+
+routes:
+  # Block Processing Endpoint
+  - name: process-blocks
+    service: utxo-indexer-api
+    paths:
+      - /api/v1/blocks
+    methods:
+      - POST
+    strip_path: false
+    preserve_host: true
+    tags:
+      - blocks
+      - write
+
+  # Balance Query Endpoint
+  - name: get-balance
+    service: utxo-indexer-api
+    paths:
+      - /api/v1/balance
+    methods:
+      - GET
+    strip_path: false
+    preserve_host: true
+    tags:
+      - balance
+      - read
+
+  # Rollback Endpoint
+  - name: rollback
+    service: utxo-indexer-api
+    paths:
+      - /api/v1/rollback
+    methods:
+      - POST
+    strip_path: false
+    preserve_host: true
+    tags:
+      - rollback
+      - admin
+
+  # Health Check Endpoint
+  - name: health-check
+    service: utxo-indexer-api
+    paths:
+      - /health
+      - /api/v1/health
+    methods:
+      - GET
+    strip_path: false
+    preserve_host: true
+    tags:
+      - health
+
+  # Metrics Endpoint
+  - name: metrics
+    service: utxo-indexer-api
+    paths:
+      - /metrics
+      - /api/v1/metrics
+    methods:
+      - GET
+    strip_path: false
+    preserve_host: true
+    tags:
+      - metrics
+      - monitoring
+
+plugins:
+  # Global Rate Limiting
+  - name: rate-limiting
+    config:
+      minute: 1000
+      hour: 10000
+      policy: redis
+      redis_host: redis-cluster-1
+      redis_port: 6379
+      redis_timeout: 2000
+      hide_client_headers: false
+
+  # Request/Response Logging
+  - name: http-log
+    config:
+      http_endpoint: http://logstash:5044
+      method: POST
+      timeout: 1000
+      keepalive: 1000
+
+  # Prometheus Metrics
+  - name: prometheus
+    config:
+      per_consumer: true
+      status_code_metrics: true
+      latency_metrics: true
+      bandwidth_metrics: true
+
+  # CORS Support
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - Authorization
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
+
+  # Request Size Limiting
+  - name: request-size-limiting
+    config:
+      allowed_payload_size: 10
+      size_unit: megabytes
+      require_content_length: false
+
+  # Response Transformer
+  - name: response-transformer
+    config:
+      add:
+        headers:
+          - "X-Powered-By: UTXO-Indexer-Cluster"
+          - "X-Response-Time: {{latency}}"
+
+# Route-specific plugins
+  # Block Processing - Enhanced Rate Limiting
+  - name: rate-limiting
+    route: process-blocks
+    config:
+      minute: 100
+      hour: 1000
+      policy: redis
+      redis_host: redis-cluster-1
+      redis_port: 6379
+      fault_tolerant: true
+
+  # Block Processing - Request Validation
+  - name: request-validator
+    route: process-blocks
+    config:
+      body_schema: |
+        {
+          "type": "object",
+          "properties": {
+            "id": {"type": "string"},
+            "height": {"type": "number", "minimum": 1},
+            "transactions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {"type": "string"},
+                  "inputs": {"type": "array"},
+                  "outputs": {"type": "array"}
+                },
+                "required": ["id", "inputs", "outputs"]
+              }
+            }
+          },
+          "required": ["id", "height", "transactions"]
+        }
+
+  # Balance Queries - Caching
+  - name: proxy-cache
+    route: get-balance
+    config:
+      response_code:
+        - 200
+      request_method:
+        - GET
+      content_type:
+        - application/json
+      cache_ttl: 300
+      strategy: memory
+
+  # Admin Routes - Authentication
+  - name: key-auth
+    route: rollback
+    config:
+      key_names:
+        - X-API-Key
+        - apikey
+      key_in_body: false
+      key_in_query: true
+      hide_credentials: true
+
+  # Admin Routes - IP Restriction
+  - name: ip-restriction
+    route: rollback
+    config:
+      allow:
+        - 172.20.0.0/16  # Internal network only
+        - 127.0.0.1      # Localhost
+
+# Consumers (API Keys)
+consumers:
+  - username: admin
+    custom_id: admin-user
+    tags:
+      - admin
+
+  - username: monitoring
+    custom_id: monitoring-user
+    tags:
+      - monitoring
+
+  - username: read-only
+    custom_id: readonly-user
+    tags:
+      - readonly
+
+# API Keys
+keyauth_credentials:
+  - consumer: admin
+    key: admin-secret-key-12345
+
+  - consumer: monitoring
+    key: monitoring-key-67890
+
+  - consumer: read-only
+    key: readonly-key-abcde
+
+# Rate Limiting for Specific Consumers
+  - name: rate-limiting
+    consumer: read-only
+    config:
+      minute: 500
+      hour: 5000
+
+  - name: rate-limiting
+    consumer: monitoring
+    config:
+      minute: 2000
+      hour: 20000
+
+# JWT Authentication (Optional)
+jwt_secrets:
+  - consumer: admin
+    algorithm: HS256
+    key: admin-jwt-key
+    secret: your-256-bit-secret-here
+
+# ACL Groups
+acls:
+  - consumer: admin
+    group: admin-group
+
+  - consumer: monitoring
+    group: monitoring-group
+
+  - consumer: read-only
+    group: readonly-group
+
+# Service-specific ACLs
+  - name: acl
+    route: rollback
+    config:
+      allow:
+        - admin-group
+
+  - name: acl
+    route: metrics
+    config:
+      allow:
+        - admin-group
+        - monitoring-group 

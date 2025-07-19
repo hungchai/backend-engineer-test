@@ -1,0 +1,195 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'utxo-indexer-cluster'
+    environment: 'production'
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 10s
+    metrics_path: /metrics
+
+  # UTXO Indexer API Instances
+  - job_name: 'utxo-api'
+    static_configs:
+      - targets:
+        - 'utxo-api-1:3000'
+        - 'utxo-api-2:3000'
+        - 'utxo-api-3:3000'
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scrape_timeout: 5s
+    labels:
+      service: 'utxo-api'
+      tier: 'application'
+
+  # HAProxy Load Balancer
+  - job_name: 'haproxy'
+    static_configs:
+      - targets: ['load-balancer:8404']
+    metrics_path: /stats
+    params:
+      stats: ['']
+    scrape_interval: 15s
+
+  # Kong API Gateway
+  - job_name: 'kong'
+    static_configs:
+      - targets:
+        - 'api-gateway-1:8001'
+        - 'api-gateway-2:8001'
+    metrics_path: /metrics
+    scrape_interval: 15s
+    labels:
+      service: 'kong-gateway'
+      tier: 'gateway'
+
+  # PostgreSQL Database Metrics
+  - job_name: 'postgres'
+    static_configs:
+      - targets:
+        - 'postgres-primary:5432'
+        - 'postgres-replica-1:5432'
+        - 'postgres-replica-2:5432'
+    scrape_interval: 30s
+    metrics_path: /metrics
+    labels:
+      service: 'postgresql'
+      tier: 'database'
+
+  # Redis Cluster Metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets:
+        - 'redis-cluster-1:6379'
+        - 'redis-cluster-2:6379'
+        - 'redis-cluster-3:6379'
+    scrape_interval: 15s
+    metrics_path: /metrics
+    labels:
+      service: 'redis-cluster'
+      tier: 'cache'
+
+  # Kafka Cluster Metrics
+  - job_name: 'kafka'
+    static_configs:
+      - targets:
+        - 'kafka-1:9092'
+        - 'kafka-2:9092'
+        - 'kafka-3:9092'
+    scrape_interval: 30s
+    labels:
+      service: 'kafka'
+      tier: 'messaging'
+
+  # Zookeeper Metrics
+  - job_name: 'zookeeper'
+    static_configs:
+      - targets: ['zookeeper:2181']
+    scrape_interval: 30s
+    labels:
+      service: 'zookeeper'
+      tier: 'coordination'
+
+  # Consul Service Discovery
+  - job_name: 'consul'
+    static_configs:
+      - targets:
+        - 'consul-1:8500'
+        - 'consul-2:8500'
+        - 'consul-3:8500'
+    scrape_interval: 30s
+    metrics_path: /v1/agent/metrics
+    params:
+      format: ['prometheus']
+    labels:
+      service: 'consul'
+      tier: 'service-discovery'
+
+  # Node Exporter (System Metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+        - 'node-exporter:9100'
+    scrape_interval: 15s
+    labels:
+      service: 'node-exporter'
+      tier: 'infrastructure'
+
+  # Docker Container Metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    labels:
+      service: 'cadvisor'
+      tier: 'infrastructure'
+
+  # Elasticsearch Metrics
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    scrape_interval: 30s
+    metrics_path: /_prometheus/metrics
+    labels:
+      service: 'elasticsearch'
+      tier: 'logging'
+
+  # Grafana Metrics
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    labels:
+      service: 'grafana'
+      tier: 'monitoring'
+
+  # Custom Application Metrics
+  - job_name: 'utxo-business-metrics'
+    static_configs:
+      - targets:
+        - 'utxo-api-1:3000'
+        - 'utxo-api-2:3000'
+        - 'utxo-api-3:3000'
+    scrape_interval: 10s
+    metrics_path: /metrics/business
+    scrape_timeout: 5s
+    labels:
+      service: 'utxo-business'
+      tier: 'application'
+
+# Service Discovery Configuration (optional)
+# - job_name: 'consul-sd'
+#   consul_sd_configs:
+#     - server: 'consul-1:8500'
+#       services: ['utxo-api', 'postgres', 'redis']
+#   relabel_configs:
+#     - source_labels: [__meta_consul_service]
+#       target_label: service
+#     - source_labels: [__meta_consul_service_address]
+#       target_label: __address__
+
+# Remote Write Configuration (for long-term storage)
+# remote_write:
+#   - url: "https://prometheus-remote-write-endpoint"
+#     headers:
+#       Authorization: "Bearer YOUR_TOKEN"
+
+# Remote Read Configuration
+# remote_read:
+#   - url: "https://prometheus-remote-read-endpoint" 

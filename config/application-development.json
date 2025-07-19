@@ -1,0 +1,21 @@
+{
+  "server": {
+    "port": 3000
+  },
+  "database": {
+    "host": "localhost",
+    "poolSize": 5,
+    "maxConnections": 10
+  },
+  "cache": {
+    "enabled": false
+  },
+  "indexer": {
+    "batchSize": 100,
+    "enableMetrics": true
+  },
+  "logging": {
+    "level": "debug",
+    "prettyPrint": true
+  }
+}

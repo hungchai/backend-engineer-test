@@ -1,0 +1,22 @@
+{
+  "server": {
+    "port": 3001
+  },
+  "database": {
+    "database": "utxo_indexer_test",
+    "poolSize": 2,
+    "maxConnections": 5
+  },
+  "cache": {
+    "enabled": false
+  },
+  "indexer": {
+    "maxRollbackDepth": 100,
+    "batchSize": 10,
+    "enableMetrics": false
+  },
+  "logging": {
+    "level": "error",
+    "prettyPrint": false
+  }
+}

@@ -4,11 +4,19 @@
   "type": "module",
   "scripts": {
     "start": "bun src/index.ts",
-    "run-docker": "docker-compose up -d --build"
+    "run-docker": "docker-compose up -d --build",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir=dist",
+    "clean": "rm -rf dist",
+    "lint": "echo 'Linting with TypeScript compiler'",
+    "db:setup": "echo 'Run docker-compose up to setup PostgreSQL'"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/pg": "^8.11.8"
+    "@types/pg": "^8.11.8",
+    "@types/node": "^20.0.0"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

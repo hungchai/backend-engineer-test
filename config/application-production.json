@@ -1,0 +1,26 @@
+{
+  "server": {
+    "port": 8080,
+    "host": "0.0.0.0"
+  },
+  "database": {
+    "poolSize": 25,
+    "maxConnections": 50,
+    "idleTimeoutMs": 60000,
+    "connectionTimeoutMs": 10000
+  },
+  "cache": {
+    "enabled": true,
+    "ttlSeconds": 600,
+    "maxMemoryMB": 512
+  },
+  "indexer": {
+    "maxRollbackDepth": 5000,
+    "batchSize": 2000,
+    "enableMetrics": true
+  },
+  "logging": {
+    "level": "warn",
+    "prettyPrint": false
+  }
+}

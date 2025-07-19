@@ -1,0 +1,43 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'utxo-indexer-simple'
+    environment: 'development'
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 10s
+
+  # UTXO Indexer API Instances
+  - job_name: 'utxo-api'
+    static_configs:
+      - targets:
+        - 'utxo-api-1:3000'
+        - 'utxo-api-2:3000'
+        - 'utxo-api-3:3000'
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scrape_timeout: 5s
+
+  # HAProxy Load Balancer
+  - job_name: 'haproxy'
+    static_configs:
+      - targets: ['load-balancer:8404']
+    metrics_path: /stats
+    scrape_interval: 15s
+
+  # PostgreSQL (if metrics are exposed)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-primary:5432']
+    scrape_interval: 30s
+
+  # Redis (if metrics are exposed)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-cluster-1:6379']
+    scrape_interval: 15s 

@@ -1,0 +1,46 @@
+{
+  "datacenter": "utxo-cluster",
+  "data_dir": "/consul/data",
+  "log_level": "INFO",
+  "server": true,
+  "bootstrap_expect": 3,
+  "ui_config": {
+    "enabled": true
+  },
+  "connect": {
+    "enabled": true
+  },
+  "bind_addr": "0.0.0.0",
+  "client_addr": "0.0.0.0",
+  "retry_join": [
+    "consul-1",
+    "consul-2",
+    "consul-3"
+  ],
+  "services": [
+    {
+      "name": "utxo-api",
+      "port": 3000,
+      "check": {
+        "http": "http://utxo-api-1:3000/health",
+        "interval": "10s"
+      }
+    },
+    {
+      "name": "postgres-primary",
+      "port": 5432,
+      "check": {
+        "tcp": "postgres-primary:5432",
+        "interval": "30s"
+      }
+    },
+    {
+      "name": "redis-cluster",
+      "port": 6379,
+      "check": {
+        "tcp": "redis-cluster-1:6379",
+        "interval": "15s"
+      }
+    }
+  ]
+}
