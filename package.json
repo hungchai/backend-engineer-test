@@ -3,15 +3,16 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "start": "PORT=3000 bun src/index.ts",
+    "start": "bun src/index.ts",
     "run-docker": "docker-compose up -d --build",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "dev": "PORT=3000 bun --watch src/index.ts",
+    "dev": "bun --watch src/index.ts",
     "build": "bun build src/index.ts --outdir=dist",
     "clean": "rm -rf dist",
     "lint": "echo 'Linting with TypeScript compiler'",
-    "db:setup": "echo 'Run docker-compose up to setup PostgreSQL'"
+    "db:setup": "echo 'Run docker-compose up to setup PostgreSQL'",
+    "health-check": "curl -f http://localhost:3000/health || exit 1"
   },
   "devDependencies": {
     "@types/bun": "latest",

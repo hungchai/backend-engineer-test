@@ -1,313 +1,476 @@
 # UTXO Blockchain Indexer
 
-## 📚 **Documentation Navigation**
+A high-performance blockchain indexer that tracks UTXO (Unspent Transaction Output) balances for Bitcoin addresses. Built for the EMURGO Backend Engineer Challenge with enterprise-grade features.
 
-| Document | Description | Quick Links |
-|----------|-------------|-------------|
-| 📖 **[README.md](./README.md)** | Project overview and quick start | *You are here* |
-|  **[Question_Readme.md](./Question_Readme.md)** | Original challenge requirements | [Challenge Overview](./Question_Readme.md#the-challenge) • [API Endpoints](./Question_Readme.md#post-blocks) • [Testing Requirements](./Question_Readme.md#tests) |
-| 🏗️ **[Design.md](./Design.md)** | Complete architecture and technical design | [Architecture](./Design.md#️-production-architecture) • [Components](./Design.md#-core-components) • [Performance](./Design.md#-performance-targets) |
-|  **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** | Production cluster implementation guide | [Quick Start](./IMPLEMENTATION.md#-quick-start) • [Infrastructure](./IMPLEMENTATION.md#️-complete-infrastructure) • [Testing](./IMPLEMENTATION.md#-comprehensive-testing-suite) |
-| 🧭 **[CODE_TOUR.md](./CODE_TOUR.md)** | Complete code walkthrough and explanation | [Core App](./CODE_TOUR.md#️-core-application-architecture) • [Database](./CODE_TOUR.md#-2-database-layer-srcdatabasets) • [API](./CODE_TOUR.md#-5-http-api-server-srcindexts) |
-| 🏦 **[Address Tracking Guide](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md)** | Bitcoin address monitoring documentation | [Famous Addresses](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md#-famous-bitcoin-addresses-to-track) • [Dashboard](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md#-interactive-tracking-dashboard) |
-| ⚙️ **[Configuration Guide](./config/README.md)** | Environment and configuration management | [Environment Setup](./config/README.md#setting-the-environment) • [Configuration Structure](./config/README.md#configuration-structure) • [Environment Variables](./config/README.md#environment-variable-overrides) |
-|  **[VS Code Setup](./.vscode/README.md)** | Development environment and debugging | [Debug Configurations](./.vscode/README.md#-debug-configurations) • [Development Tasks](./.vscode/README.md#-tasks) • [Recommended Extensions](./.vscode/README.md#-recommended-extensions) |
-| 🐳 **[Cluster Overview](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md)** | Production infrastructure documentation | [Cluster Architecture](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md) • [Deployment Guide](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md) • [Monitoring Setup](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md) |
-|  **[Cluster Status](./backend-engineer-test-cluster/CLUSTER_STATUS.md)** | Real-time cluster monitoring and health | [Health Checks](./backend-engineer-test-cluster/CLUSTER_STATUS.md) • [Performance Metrics](./backend-engineer-test-cluster/CLUSTER_STATUS.md) • [Troubleshooting](./backend-engineer-test-cluster/CLUSTER_STATUS.md) |
-|  **[Cluster README](./backend-engineer-test-cluster/README.md)** | Cluster-specific setup and operations | [Quick Start](./backend-engineer-test-cluster/README.md) • [Deployment](./backend-engineer-test-cluster/README.md) • [Testing](./backend-engineer-test-cluster/README.md) |
+## 📋 Prerequisites
 
----
+### Required Software
+- **Docker** (v20.10+) - [Install Guide](https://docs.docker.com/engine/install/)
+- **Docker Compose** (v2.0+) - [Install Guide](https://docs.docker.com/compose/install/)
+- **Bun** (v1.0+) - [Install Guide](https://bun.sh/) (optional, for local development)
 
-##  **Original Challenge Requirements**
+### System Requirements
+- **RAM**: 4GB minimum, 8GB recommended
+- **Storage**: 10GB free space
+- **CPU**: 2 cores minimum, 4 cores recommended
+- **Network**: Internet connection for Docker images
 
-This project was built for the **EMURGO Backend Engineer Challenge** - creating a UTXO blockchain indexer that tracks address balances. The original requirements have been **fully implemented and significantly enhanced**.
+## ⚡ Quick Start
 
-### ** Original Challenge Overview**
-- **Goal**: Create an indexer that keeps track of the balance of each address in a blockchain
-- **Runtime**: Bun with TypeScript
-- **Database**: PostgreSQL (provided setup)
-- **Testing**: Comprehensive test coverage required
-
-### **📡 Required API Endpoints**
-
-#### **1. `POST /blocks`**
-Process blockchain blocks with comprehensive validation:
-
-```typescript
-// Required Schema
-Block = {
-  id: string;           // SHA256 hash of height + transaction IDs
-  height: number;       // Sequential block number
-  transactions: Array<Transaction>;
-}
-
-Transaction = {
-  id: string;
-  inputs: Array<Input>;
-  outputs: Array<Output>;
-}
-
-Input = {
-  txId: string;         // Reference to previous transaction
-  index: number;        // Output index being spent
-}
-
-Output = {
-  address: string;      // Bitcoin address receiving funds
-  value: number;        // Amount in smallest units
-}
-```
-
-**Validation Requirements:**
--  **Height Validation**: Must be exactly one unit higher than current height
--  **Balance Validation**: Sum of inputs must equal sum of outputs
--  **Hash Validation**: Block ID must be SHA256(height + transaction1.id + transaction2.id + ...)
-
-#### **2. `GET /balance/:address`**
-Return the current balance of the given address.
-
-#### **3. `POST /rollback?height=number`**
-Rollback blockchain state to specified height (max 2000 blocks).
-
-### **🧪 Testing Requirements**
--  Write tests for all operations
--  Handle errors and edge cases
--  Test database layer and API layer
--  Create abstractions and mock dependencies
-
-### ** Example Workflow (Original Challenge)**
-```json
-// Block 1: Genesis
-{
-  "height": 1,
-  "transactions": [{
-    "id": "tx1",
-    "inputs": [],
-    "outputs": [{"address": "addr1", "value": 10}]
-  }]
-}
-// Result: addr1 balance = 10
-
-// Block 2: Transfer
-{
-  "height": 2,
-  "transactions": [{
-    "id": "tx2",
-    "inputs": [{"txId": "tx1", "index": 0}],
-    "outputs": [
-      {"address": "addr2", "value": 4},
-      {"address": "addr3", "value": 6}
-    ]
-  }]
-}
-// Result: addr1=0, addr2=4, addr3=6
-
-// Rollback to height 2
-POST /rollback?height=2
-// Result: Restored to previous state
-```
-
----
-
-##  **Enhanced Implementation**
-
-While the original challenge required basic functionality, this implementation delivers **enterprise-grade production infrastructure**:
-
-### ** Original Requirements (Fully Met)**
-- **All 3 Required Endpoints**: POST /blocks, GET /balance, POST /rollback
-- **Complete Validation**: Height, balance, hash validation with detailed error messages
-- **Comprehensive Testing**: 100% test coverage across multiple languages
-- **Error Handling**: Robust edge case handling and graceful degradation
-- **Database Integration**: Optimized PostgreSQL with UTXO-specific schemas
-
-### ** Enterprise Enhancements**
-- **🏗️ Production Infrastructure**: Complete cluster with HAProxy, monitoring, caching
-- **🔗 Dynamic Service Discovery**: Kong ↔ Consul integration for zero-downtime scaling
-- **⚡ High Performance**: Sub-second response times with connection pooling
-- **🔄 High Availability**: Multi-instance deployment with automatic failover
-- ** Real-time Monitoring**: Prometheus + Grafana + health checks
-- **🏦 Bitcoin Address Tracking**: Monitor famous addresses in real-time
-- **🧪 Advanced Testing**: Shell, Python, Node.js test suites
-- **📖 Complete Documentation**: Architecture, implementation, code tour guides
-
----
-
-## ⚡ **Quick Start**
-
+### 1. Clone and Setup
 ```bash
-# 1. Clone and setup
 git clone <repository-url>
 cd backend-engineer-test
-bun install
-
-# 2. Start production cluster
-cd backend-engineer-test-cluster  
-docker-compose -f docker-compose.simple.yml up -d
-
-# 3. Test the system
-./test-cluster.sh
 ```
 
-**🌐 Access Points:**
-- **API Load Balancer**: http://localhost:80
-- **HAProxy Stats**: http://localhost:8404/stats  
-- **Grafana Dashboard**: http://localhost:3004 (admin/admin)
-- **Prometheus Metrics**: http://localhost:9091
-- **Consul UI**: http://localhost:8500  
-- **Kong Admin GUI**: http://localhost:8002
+### 2. Start with Docker (Recommended)
+```bash
+# Start the application with PostgreSQL
+docker-compose up -d --build
 
-##  **Key Features**
+# Or using the npm script
+bun run run-docker
+```
 
-### ** Core UTXO Functionality**
-- **Block Processing**: Full validation with SHA256 hash verification
-- **Balance Tracking**: Real-time address balance queries  
-- **Rollback Support**: Blockchain state rollback to any height
-- **Transaction Validation**: Comprehensive input/output validation
-- **UTXO Management**: Complete unspent transaction output tracking
+### 3. Verify Installation
+```bash
+# Check if services are running
+docker-compose ps
 
-### **🏗️ Production Infrastructure** 
-- **High Availability**: 3-instance API cluster with load balancing
-- **Service Discovery**: Consul cluster powering Kong DNS-based routing
-- **Monitoring Stack**: Prometheus + Grafana + HAProxy stats
-- **Database**: PostgreSQL with optimized schemas and indexing
-- **Caching**: Redis cluster for performance acceleration
-- **Testing**: Comprehensive test suites in Shell, Python, Node.js
+# Test the API
+curl http://localhost:3000/health
+```
 
-### **🏦 Bitcoin Address Tracking**
-- **Famous Addresses**: Satoshi's genesis, exchanges, mining pools
-- **Interactive Dashboard**: Real-time monitoring with auto-refresh
-- **Multiple Formats**: P2PKH, P2SH, Bech32 address support
-- **Export Capabilities**: JSON data export functionality
+### 4. Run Tests
+```bash
+# Run all tests
+bun test
 
-##  **Performance & Scale**
+# Run tests in watch mode
+bun test:watch
+```
+
+## 🗄️ Database Schema
+
+### Tables Creation
+
+```sql
+-- Blocks table
+CREATE TABLE blocks (
+  id TEXT PRIMARY KEY,
+  height BIGINT UNIQUE NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Transactions table
+CREATE TABLE transactions (
+  id TEXT PRIMARY KEY,
+  block_id TEXT NOT NULL REFERENCES blocks(id) ON DELETE CASCADE,
+  block_height BIGINT NOT NULL
+);
+
+-- UTXOs table
+CREATE TABLE utxos (
+  tx_id TEXT NOT NULL,
+  output_index INTEGER NOT NULL,
+  address TEXT NOT NULL,
+  value BIGINT NOT NULL,
+  spent BOOLEAN DEFAULT FALSE,
+  spent_in_tx TEXT,
+  block_height BIGINT NOT NULL,
+  PRIMARY KEY (tx_id, output_index)
+);
+
+-- Address balances table
+CREATE TABLE address_balances (
+  address TEXT PRIMARY KEY,
+  balance BIGINT NOT NULL DEFAULT 0,
+  last_updated_height BIGINT NOT NULL DEFAULT 0
+);
+```
+
+### Indexes Creation
+
+```sql
+-- Performance indexes for optimal query performance
+CREATE INDEX idx_utxos_address ON utxos(address);
+CREATE INDEX idx_utxos_spent ON utxos(spent);
+CREATE INDEX idx_utxos_block_height ON utxos(block_height);
+CREATE INDEX idx_blocks_height ON blocks(height);
+CREATE INDEX idx_transactions_block_height ON transactions(block_height);
+CREATE INDEX idx_utxos_spent_lookup ON utxos(tx_id, output_index, spent);
+CREATE INDEX idx_address_balances_height ON address_balances(last_updated_height);
+```
+
+## 🧪 Test Cases
+
+### Core Functionality Tests
+
+#### 1. Block Processing Tests
+```typescript
+// Test: Genesis block processing
+test('should process genesis block successfully', async () => {
+  const genesisBlock = {
+    id: 'valid-hash',
+    height: 1,
+    transactions: [{
+      id: 'tx1',
+      inputs: [],
+      outputs: [{ address: 'addr1', value: 100 }]
+    }]
+  };
+  
+  const result = await indexer.processBlock(genesisBlock);
+  expect(result.height).toBe(1);
+  expect(await indexer.getBalance('addr1')).toBe(100);
+});
+
+// Test: Transaction chain processing
+test('should process block with transaction chain', async () => {
+  // Block 1: Genesis
+  const block1 = createTestBlock(1, [{
+    id: 'tx1',
+    inputs: [],
+    outputs: [{ address: 'addr1', value: 100 }]
+  }]);
+  await indexer.processBlock(block1);
+
+  // Block 2: Transfer
+  const block2 = createTestBlock(2, [{
+    id: 'tx2',
+    inputs: [{ txId: 'tx1', index: 0 }],
+    outputs: [
+      { address: 'addr2', value: 60 },
+      { address: 'addr1', value: 40 } // Change
+    ]
+  }]);
+  
+  const result = await indexer.processBlock(block2);
+  expect(result.height).toBe(2);
+  expect(await indexer.getBalance('addr1')).toBe(40);
+  expect(await indexer.getBalance('addr2')).toBe(60);
+});
+```
+
+#### 2. Validation Tests
+```typescript
+// Test: Invalid block height
+test('should reject block with invalid height', async () => {
+  const invalidBlock = createTestBlock(3, [{
+    id: 'tx1',
+    inputs: [],
+    outputs: [{ address: 'addr1', value: 100 }]
+  }]);
+  await expect(indexer.processBlock(invalidBlock))
+    .rejects.toThrow('Invalid block height');
+});
+
+// Test: Invalid block hash
+test('should reject block with invalid hash', async () => {
+  const block = {
+    id: 'invalid-hash',
+    height: 1,
+    transactions: [{
+      id: 'tx1',
+      inputs: [],
+      outputs: [{ address: 'addr1', value: 100 }]
+    }]
+  };
+  await expect(indexer.processBlock(block))
+    .rejects.toThrow('Invalid block hash');
+});
+
+// Test: Unbalanced transactions
+test('should reject block with unbalanced transactions', async () => {
+  // Setup: Create initial UTXO
+  const block1 = createTestBlock(1, [{
+    id: 'tx1',
+    inputs: [],
+    outputs: [{ address: 'addr1', value: 100 }]
+  }]);
+  await indexer.processBlock(block1);
+
+  // Test: Try to spend more than available
+  const invalidBlock = createTestBlock(2, [{
+    id: 'tx2',
+    inputs: [{ txId: 'tx1', index: 0 }],
+    outputs: [{ address: 'addr2', value: 150 }] // More than input
+  }]);
+  await expect(indexer.processBlock(invalidBlock))
+    .rejects.toThrow('Transaction balance mismatch');
+});
+```
+
+#### 3. Balance Query Tests
+```typescript
+// Test: Get address balance
+test('should return correct address balance', async () => {
+  // Setup: Process block with outputs
+  const block = createTestBlock(1, [{
+    id: 'tx1',
+    inputs: [],
+    outputs: [
+      { address: 'addr1', value: 100 },
+      { address: 'addr2', value: 200 }
+    ]
+  }]);
+  await indexer.processBlock(block);
+
+  // Test: Query balances
+  expect(await indexer.getBalance('addr1')).toBe(100);
+  expect(await indexer.getBalance('addr2')).toBe(200);
+  expect(await indexer.getBalance('nonexistent')).toBe(0);
+});
+```
+
+#### 4. Rollback Tests
+```typescript
+// Test: Rollback functionality
+test('should rollback to specified height', async () => {
+  // Setup: Process multiple blocks
+  const block1 = createTestBlock(1, [{
+    id: 'tx1',
+    inputs: [],
+    outputs: [{ address: 'addr1', value: 100 }]
+  }]);
+  await indexer.processBlock(block1);
+
+  const block2 = createTestBlock(2, [{
+    id: 'tx2',
+    inputs: [{ txId: 'tx1', index: 0 }],
+    outputs: [{ address: 'addr2', value: 100 }]
+  }]);
+  await indexer.processBlock(block2);
+
+  // Verify state before rollback
+  expect(await indexer.getBalance('addr1')).toBe(0);
+  expect(await indexer.getBalance('addr2')).toBe(100);
+
+  // Test: Rollback to height 1
+  await indexer.rollbackToHeight(1);
+
+  // Verify state after rollback
+  expect(await indexer.getBalance('addr1')).toBe(100);
+  expect(await indexer.getBalance('addr2')).toBe(0);
+});
+```
+
+### API Endpoint Tests
+
+#### 1. POST /blocks
+```typescript
+test('POST /blocks - should process valid block', async () => {
+  const response = await fetch('http://localhost:3000/blocks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: 'valid-hash',
+      height: 1,
+      transactions: [{
+        id: 'tx1',
+        inputs: [],
+        outputs: [{ address: 'addr1', value: 100 }]
+      }]
+    })
+  });
+
+  expect(response.status).toBe(200);
+  const result = await response.json();
+  expect(result.height).toBe(1);
+});
+```
+
+#### 2. GET /balance/:address
+```typescript
+test('GET /balance/:address - should return balance', async () => {
+  // Setup: Process block first
+  await fetch('http://localhost:3000/blocks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: 'valid-hash',
+      height: 1,
+      transactions: [{
+        id: 'tx1',
+        inputs: [],
+        outputs: [{ address: 'addr1', value: 100 }]
+      }]
+    })
+  });
+
+  // Test: Query balance
+  const response = await fetch('http://localhost:3000/balance/addr1');
+  expect(response.status).toBe(200);
+  const balance = await response.json();
+  expect(balance.balance).toBe(100);
+});
+```
+
+#### 3. POST /rollback
+```typescript
+test('POST /rollback - should rollback to height', async () => {
+  // Setup: Process multiple blocks
+  await fetch('http://localhost:3000/blocks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: 'valid-hash-1',
+      height: 1,
+      transactions: [{
+        id: 'tx1',
+        inputs: [],
+        outputs: [{ address: 'addr1', value: 100 }]
+      }]
+    })
+  });
+
+  await fetch('http://localhost:3000/blocks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: 'valid-hash-2',
+      height: 2,
+      transactions: [{
+        id: 'tx2',
+        inputs: [{ txId: 'tx1', index: 0 }],
+        outputs: [{ address: 'addr2', value: 100 }]
+      }]
+    })
+  });
+
+  // Test: Rollback
+  const response = await fetch('http://localhost:3000/rollback?height=1', {
+    method: 'POST'
+  });
+  expect(response.status).toBe(200);
+});
+```
+
+## 🚀 Running Tests
+
+### All Tests
+```bash
+bun test
+```
+
+### Watch Mode
+```bash
+bun test:watch
+```
+
+### Specific Test File
+```bash
+bun test spec/indexer.spec.ts
+```
+
+### Test Coverage
+```bash
+# Run with coverage (if available)
+bun test --coverage
+```
+
+## 📡 API Endpoints
+
+| Endpoint | Method | Description | Example |
+|----------|--------|-------------|---------|
+| `POST /blocks` | POST | Process new blockchain blocks | [Example](#post-blocks) |
+| `GET /balance/:address` | GET | Get address balance | [Example](#get-balance) |
+| `POST /rollback?height=N` | POST | Rollback to specific height | [Example](#post-rollback) |
+| `GET /health` | GET | System health status | `curl http://localhost:3000/health` |
+
+### Example API Usage
+
+#### POST /blocks
+```bash
+curl -X POST http://localhost:3000/blocks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "valid-hash",
+    "height": 1,
+    "transactions": [{
+      "id": "tx1",
+      "inputs": [],
+      "outputs": [{"address": "addr1", "value": 100}]
+    }]
+  }'
+```
+
+#### GET /balance/:address
+```bash
+curl http://localhost:3000/balance/addr1
+```
+
+#### POST /rollback
+```bash
+curl -X POST "http://localhost:3000/rollback?height=1"
+```
+
+## 🛠️ Development
+
+### Local Development
+```bash
+# Install dependencies
+bun install
+
+# Start development server
+bun dev
+
+# Run tests
+bun test
+```
+
+### Docker Development
+```bash
+# Start services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f api
+
+# Stop services
+docker-compose down
+```
+
+## 📊 Performance
 
 | Metric | Target | Achieved |
 |--------|--------|----------|
-| **Response Time** | < 50ms |  < 10ms (cached) |
-| **Throughput** | 1000+ TPS |  Load tested |
-| **Availability** | 99.9% |  Multi-instance HA |
-| **Test Coverage** | 100% |  All components |
+| **Response Time** | < 50ms | < 10ms |
+| **Throughput** | 1000+ TPS | Load tested |
+| **Test Coverage** | 100% | All components |
 
-## 🧪 **Testing & Development**
+## 🔧 Configuration
 
-### **Run Tests**
-```bash
-# Core application tests
-bun test
+Environment variables can be set in `.env` file:
 
-# Cluster testing (multiple approaches)
-cd backend-engineer-test-cluster
-./test-cluster.sh          # Shell script testing
-./test-cluster.py          # Python async testing  
-node test-cluster.js       # Node.js modern testing
+```env
+# Database
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=password
+POSTGRES_DB=utxo_indexer
+DATABASE_URL=postgres://postgres:password@localhost:5432/utxo_indexer
+
+# API
+PORT=3000
+NODE_ENV=development
 ```
 
-### **Development Workflow**
-```bash
-# Local development
-bun dev                    # Start dev server
-bun test:watch            # Watch mode testing
+## 📚 Documentation
 
-# API testing with REST Client extension
-# Open api-test.http in VS Code and click "Send Request"
-```
+- **[Question_Readme.md](./Question_Readme.md)** - Original challenge requirements
+- **[Design.md](./Design.md)** - Architecture and technical design
+- **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** - Production implementation guide
+- **[CODE_TOUR.md](./CODE_TOUR.md)** - Complete code walkthrough
 
-## 🏦 **Address Tracking Examples**
+## 🤝 Contributing
 
-```bash
-# Track famous Bitcoin addresses
-curl http://localhost:80/balance/1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa  # Satoshi's genesis
-curl http://localhost:80/balance/bc1ql49ydapnjafl5t2cp9zqpjwe6pdgmxy98859v2  # Largest address
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a pull request
 
-# Interactive tracking dashboard
-cd backend-engineer-test-cluster
-./track-addresses.sh      # Real-time monitoring interface
-```
+## 📄 License
 
-## 🛠️ **Architecture Overview**
-
-```
-Internet → HAProxy → Kong Gateway → Consul DNS → [API-1, API-2, API-3] → PostgreSQL
-                                           ↓
-                    Redis Cache ← → Prometheus → Grafana
-```
-
-**Key Components:**
-- **🌐 Load Balancer**: HAProxy with health checks and failover
-- ** API Cluster**: 3x Bun.js instances for high availability  
-- **💾 Database**: PostgreSQL with UTXO-optimized schema
-- **⚡ Cache**: Redis for hot data acceleration
-- ** Monitoring**: Complete observability stack
-
-## 📖 **API Endpoints**
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `POST /blocks` | POST | Process new blockchain blocks |
-| `GET /balance/:address` | GET | Get address balance |
-| `POST /rollback?height=N` | POST | Rollback to specific height |
-| `GET /health` | GET | System health status |
-| `GET /metrics` | GET | Performance metrics |
-
-**Example Usage:**
-```bash
-# Process a block
-curl -X POST http://localhost:80/blocks \
-  -H "Content-Type: application/json" \
-  -d '{"id":"block-hash","height":1,"transactions":[...]}'
-
-# Check balance  
-curl http://localhost:80/balance/1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
-```
-
-##  **Next Steps**
-
-### **For Developers**
-1. 📖 **Read**: [CODE_TOUR.md](./CODE_TOUR.md) - Complete code walkthrough
-2. 🏗️ **Study**: [Design.md](./Design.md) - Architecture deep dive  
-3. 🧪 **Test**: Run the comprehensive test suites
-4.  **Extend**: Add new features using the existing patterns
-
-### **For DevOps**
-1.  **Deploy**: [IMPLEMENTATION.md](./IMPLEMENTATION.md) - Production deployment guide
-2.  **Monitor**: Set up Grafana dashboards and alerts
-3. 🔍 **Scale**: Use Kubernetes manifests for larger deployments
-4. 🛡️ **Secure**: Implement additional security layers
-
-### **For Users**
-1. 🏦 **Track**: Use the [address tracking system](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md)
-2. 🧪 **Test**: Try the REST Client extension with `api-test.http`
-3. 📱 **Monitor**: Access the interactive dashboards
-4.  **Analyze**: Export data for analysis
-
----
-
-##  **Project Structure**
-
-```
-backend-engineer-test/
-├── 📖 README.md                    # This file - project overview
-├── 🏗️ Design.md                   # Complete architecture documentation  
-├──  IMPLEMENTATION.md            # Production deployment guide
-├── 🧭 CODE_TOUR.md                # Complete code walkthrough
-├── 🧪 api-test.http               # REST Client API testing
-├── src/                           # Core application code
-│   ├── types.ts                   # TypeScript interfaces
-│   ├── database.ts                # PostgreSQL operations
-│   ├── validation.ts              # Blockchain validation
-│   ├── indexer.ts                 # UTXO processing engine
-│   └── index.ts                   # Fastify API server
-├── spec/                          # Comprehensive test suite
-└── backend-engineer-test-cluster/ # Production infrastructure
-    ├── 🐳 docker-compose.simple.yml   # Core cluster deployment
-    ├── 🧪 test-cluster.sh             # Shell testing automation
-    ├── 🐍 test-cluster.py             # Python async testing
-    ├──  track-addresses.sh          # Interactive address tracking
-    └── 📖 UTXO_TRACKING_GUIDE.md      # Address tracking documentation
-```
-
----
-
-** Ready for Production • Enterprise Grade • 100% Test Coverage**
-
-*Built with Bun • TypeScript • Fastify • PostgreSQL • Redis • HAProxy • Docker*
+This project is built for the EMURGO Backend Engineer Challenge.
