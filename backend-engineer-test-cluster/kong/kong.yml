@@ -3,7 +3,7 @@ _transform: true
 
 services:
   - name: utxo-indexer-api
-    url: http://utxo-api-1:3000
+    url: http://utxo-api.service.consul:3000
     tags:
       - utxo
       - blockchain
@@ -11,23 +11,7 @@ services:
     write_timeout: 60000
     read_timeout: 60000
 
-  - name: utxo-indexer-api-2
-    url: http://utxo-api-2:3000
-    tags:
-      - utxo
-      - blockchain
-    connect_timeout: 5000
-    write_timeout: 60000
-    read_timeout: 60000
-
-  - name: utxo-indexer-api-3
-    url: http://utxo-api-3:3000
-    tags:
-      - utxo
-      - blockchain
-    connect_timeout: 5000
-    write_timeout: 60000
-    read_timeout: 60000
+  # Dynamic resolution via Consul DNS; no per-instance services needed
 
 upstreams:
   - name: utxo-cluster

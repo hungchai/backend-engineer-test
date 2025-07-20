@@ -364,3 +364,9 @@ kubectl logs -f deployment/kong-gateway -n utxo-indexer
 This cluster design provides enterprise-grade reliability, scalability, and performance for the UTXO blockchain indexer. With comprehensive monitoring, automated deployment, and battle-tested middleware components, it's ready to handle production workloads at scale.
 
 **Happy clustering! 🚀** 
+
+### 🛡️ API Gateway & Service Discovery
+Kong instances (`api-gateway-1`, `api-gateway-2`) leverage **Consul DNS** to route incoming traffic to healthy `utxo-api-*` back-end services. Each application pod automatically registers/deregisters under the `utxo-api` service name, enabling:
+- **Dynamic scaling** without Kong reloads.
+- **Health-aware routing** (only passing healthy targets).
+- **Blue-Green deployments** where new versions register side-by-side with old ones until healthy. 

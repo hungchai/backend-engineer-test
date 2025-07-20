@@ -5,10 +5,16 @@
 | Document | Description | Quick Links |
 |----------|-------------|-------------|
 | 📖 **[README.md](./README.md)** | Project overview and quick start | *You are here* |
+| 📋 **[Question_Readme.md](./Question_Readme.md)** | Original challenge requirements | [Challenge Overview](./Question_Readme.md#the-challenge) • [API Endpoints](./Question_Readme.md#post-blocks) • [Testing Requirements](./Question_Readme.md#tests) |
 | 🏗️ **[Design.md](./Design.md)** | Complete architecture and technical design | [Architecture](./Design.md#️-production-architecture) • [Components](./Design.md#-core-components) • [Performance](./Design.md#-performance-targets) |
 | 🚀 **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** | Production cluster implementation guide | [Quick Start](./IMPLEMENTATION.md#-quick-start) • [Infrastructure](./IMPLEMENTATION.md#️-complete-infrastructure) • [Testing](./IMPLEMENTATION.md#-comprehensive-testing-suite) |
 | 🧭 **[CODE_TOUR.md](./CODE_TOUR.md)** | Complete code walkthrough and explanation | [Core App](./CODE_TOUR.md#️-core-application-architecture) • [Database](./CODE_TOUR.md#-2-database-layer-srcdatabasets) • [API](./CODE_TOUR.md#-5-http-api-server-srcindexts) |
 | 🏦 **[Address Tracking Guide](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md)** | Bitcoin address monitoring documentation | [Famous Addresses](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md#-famous-bitcoin-addresses-to-track) • [Dashboard](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md#-interactive-tracking-dashboard) |
+| ⚙️ **[Configuration Guide](./config/README.md)** | Environment and configuration management | [Environment Setup](./config/README.md#setting-the-environment) • [Configuration Structure](./config/README.md#configuration-structure) • [Environment Variables](./config/README.md#environment-variable-overrides) |
+| 🔧 **[VS Code Setup](./.vscode/README.md)** | Development environment and debugging | [Debug Configurations](./.vscode/README.md#-debug-configurations) • [Development Tasks](./.vscode/README.md#-tasks) • [Recommended Extensions](./.vscode/README.md#-recommended-extensions) |
+| 🐳 **[Cluster Overview](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md)** | Production infrastructure documentation | [Cluster Architecture](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md) • [Deployment Guide](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md) • [Monitoring Setup](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md) |
+| 📊 **[Cluster Status](./backend-engineer-test-cluster/CLUSTER_STATUS.md)** | Real-time cluster monitoring and health | [Health Checks](./backend-engineer-test-cluster/CLUSTER_STATUS.md) • [Performance Metrics](./backend-engineer-test-cluster/CLUSTER_STATUS.md) • [Troubleshooting](./backend-engineer-test-cluster/CLUSTER_STATUS.md) |
+| 🚀 **[Cluster README](./backend-engineer-test-cluster/README.md)** | Cluster-specific setup and operations | [Quick Start](./backend-engineer-test-cluster/README.md) • [Deployment](./backend-engineer-test-cluster/README.md) • [Testing](./backend-engineer-test-cluster/README.md) |
 
 ---
 
@@ -116,6 +122,7 @@ While the original challenge required basic functionality, this implementation d
 
 ### **🚀 Enterprise Enhancements**
 - **🏗️ Production Infrastructure**: Complete cluster with HAProxy, monitoring, caching
+- **🔗 Dynamic Service Discovery**: Kong ↔ Consul integration for zero-downtime scaling
 - **⚡ High Performance**: Sub-second response times with connection pooling
 - **🔄 High Availability**: Multi-instance deployment with automatic failover
 - **📊 Real-time Monitoring**: Prometheus + Grafana + health checks
@@ -146,6 +153,8 @@ docker-compose -f docker-compose.simple.yml up -d
 - **HAProxy Stats**: http://localhost:8404/stats  
 - **Grafana Dashboard**: http://localhost:3004 (admin/admin)
 - **Prometheus Metrics**: http://localhost:9091
+- **Consul UI**: http://localhost:8500  
+- **Kong Admin GUI**: http://localhost:8002
 
 ## 🎯 **Key Features**
 
@@ -158,6 +167,7 @@ docker-compose -f docker-compose.simple.yml up -d
 
 ### **🏗️ Production Infrastructure** 
 - **High Availability**: 3-instance API cluster with load balancing
+- **Service Discovery**: Consul cluster powering Kong DNS-based routing
 - **Monitoring Stack**: Prometheus + Grafana + HAProxy stats
 - **Database**: PostgreSQL with optimized schemas and indexing
 - **Caching**: Redis cluster for performance acceleration
@@ -217,7 +227,7 @@ cd backend-engineer-test-cluster
 ## 🛠️ **Architecture Overview**
 
 ```
-Internet → HAProxy → Kong Gateway → [API-1, API-2, API-3] → PostgreSQL
+Internet → HAProxy → Kong Gateway → Consul DNS → [API-1, API-2, API-3] → PostgreSQL
                                            ↓
                     Redis Cache ← → Prometheus → Grafana
 ```

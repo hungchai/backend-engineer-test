@@ -522,3 +522,38 @@ This implementation delivers a **complete enterprise-grade UTXO blockchain index
 **🎯 Built with Enterprise Standards using Modern DevOps Practices**
 
 *Bun • TypeScript • Fastify • PostgreSQL • Redis • HAProxy • Kong • Prometheus • Grafana • Docker • Kubernetes* 
+
+## 🔗 Kong & Consul Integration Details
+
+Kong is configured to perform **service discovery through Consul** instead of using static upstream hostnames. During container startup each `utxo-api-*` instance executes the `register-with-consul.sh` script that:
+1. Registers the service `utxo-api` with the correct port (3000).
+2. Adds a health-check pointing to `http://<container_ip>:3000/health`.
+3. Deregisters on SIGTERM for graceful shutdowns.
+
+The `kong.yml` declarative config defines an **Upstream** called `utxo-indexer` that resolves to `utxo-api.service.consul`. Kong uses Consul’s DNS (`127.0.0.1:8600`) for lookups, automatically keeping the target list fresh.
+
+```yaml
+upstreams:
+  - name: utxo-indexer
+    healthchecks:
+      active:
+        http_path: /health
+services:
+  - name: utxo-api
+    host: utxo-api.service.consul
+    port: 3000
+    protocol: http
+    routes:
+      - name: v1
+        paths: [/api/v1]
+```
+
+**Environment variables set in `docker-compose.cluster.yml`**:
+```yaml
+KONG_SERVICE_DISCOVERY: consul
+KONG_CONSUL_HOST: consul-1
+KONG_CONSUL_PORT: 8500
+KONG_DNS_RESOLVER: consul-1:8600
+```
+
+> This makes Kong completely agnostic of the container orchestration layer—whether you add more `utxo-api` replicas via Docker Compose *or* Kubernetes, traffic is routed automatically without reloads. 

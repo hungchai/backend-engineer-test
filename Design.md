@@ -463,3 +463,31 @@ docker-compose -f docker-compose.simple.yml up -d
 **🚀 Built for Enterprise Scale with Modern DevOps Practices**
 
 *High Availability • High Performance • Low Latency • Zero GC Pressure • 100% Test Coverage*
+
+## 🔗 Kong ↔️ Consul Service Discovery Flow
+
+The production cluster now uses **Consul’s service catalog** to power **dynamic upstream discovery inside Kong**. Each `utxo-api-*` instance registers itself with Consul under the service name `utxo-api` (including a health-check that calls `/health`). Kong leverages the [`consul-dns` integration](https://docs.konghq.com/gateway/latest/how-to/service-discovery/consul/) so that every **Upstream** defined in `kong.yml` simply points to `utxo-api.service.consul` instead of hard-coding container hostnames.
+
+```yaml
+# excerpt from kong/kong.yml (simplified)
+services:
+  - name: utxo-indexer
+    url: http://utxo-api.service.consul:3000
+    routes:
+      - name: v1-indexer
+        paths:
+          - /api/v1
+```
+
+### End-to-End Request Path
+1. **HAProxy** terminates TLS and forwards the request to the closest **Kong** instance.
+2. **Kong** resolves `utxo-api.service.consul` via Consul’s internal DNS (`consul-1:8600`).
+3. Consul returns only **healthy** `utxo-api-*` pods (determined by the `/health` check).
+4. Kong proxies the request to the chosen instance.
+
+### Benefits
+- **Zero-downtime deployments**: New API instances register with Consul and start receiving traffic without reloading Kong.
+- **Automatic fail-over**: Unhealthy nodes are removed from the upstream pool instantly.
+- **Single source of truth**: Every component (Kong, Prometheus, Grafana dashboards) queries the same Consul catalog for topology.
+
+> **Tip:** All `utxo-api-*` containers already receive `CONSUL_URL` via environment variables and execute an init script that registers/deregisters the service on start/stop.

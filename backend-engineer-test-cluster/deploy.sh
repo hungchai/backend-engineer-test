@@ -72,18 +72,36 @@ setup_ssl_certificates() {
     
     mkdir -p ssl
     
-    if [ ! -f ssl/utxo-indexer.pem ]; then
+    # Check if we should force regenerate certificates
+    FORCE_REGENERATE=${FORCE_REGENERATE:-false}
+    
+    if [ "$FORCE_REGENERATE" = "true" ] || [ ! -f ssl/utxo-indexer.pem ]; then
         log_info "Generating self-signed SSL certificate..."
+        
+        # Generate random serial number for better security
+        SERIAL=$(openssl rand -hex 16)
+        
+        # Generate random subject with timestamp for uniqueness
+        TIMESTAMP=$(date +%s)
+        SUBJECT="/C=US/ST=State/L=City/O=UTXO-Indexer/CN=utxo-indexer-${TIMESTAMP}.local"
+        
         openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
             -keyout ssl/utxo-indexer.key \
             -out ssl/utxo-indexer.crt \
-            -subj "/C=US/ST=State/L=City/O=Organization/CN=utxo-indexer.local"
+            -subj "$SUBJECT" \
+            -set_serial "0x${SERIAL}"
         
         # Combine for HAProxy
         cat ssl/utxo-indexer.crt ssl/utxo-indexer.key > ssl/utxo-indexer.pem
-        log_success "SSL certificates generated"
+        
+        # Set proper permissions
+        chmod 600 ssl/utxo-indexer.key
+        chmod 644 ssl/utxo-indexer.crt
+        chmod 600 ssl/utxo-indexer.pem
+        
+        log_success "SSL certificates generated with random serial: ${SERIAL}"
     else
-        log_info "SSL certificates already exist"
+        log_info "SSL certificates already exist (use FORCE_REGENERATE=true to regenerate)"
     fi
 }
 
@@ -260,6 +278,17 @@ cleanup() {
     log_success "Cleanup completed"
 }
 
+cleanup_ssl() {
+    log_info "Cleaning up SSL certificates..."
+    
+    if [ -d ssl ]; then
+        rm -rf ssl/*
+        log_success "SSL certificates removed"
+    else
+        log_info "No SSL certificates to clean up"
+    fi
+}
+
 show_help() {
     echo "UTXO Blockchain Indexer - Cluster Deployment Script"
     echo ""
@@ -269,13 +298,24 @@ show_help() {
     echo "  docker-compose    Deploy using Docker Compose (default)"
     echo "  kubernetes        Deploy using Kubernetes"
     echo "  cleanup           Remove the cluster"
+    echo "  cleanup-ssl       Remove SSL certificates"
     echo "  health            Run health checks"
     echo "  help              Show this help message"
     echo ""
+    echo "Environment Variables:"
+    echo "  FORCE_REGENERATE=true  Force regenerate SSL certificates"
+    echo "  DEPLOYMENT_TYPE        Set deployment type (docker-compose|kubernetes)"
+    echo ""
     echo "Examples:"
-    echo "  $0 docker-compose    # Deploy with Docker Compose"
-    echo "  $0 kubernetes        # Deploy with Kubernetes"
-    echo "  $0 cleanup           # Remove all cluster resources"
+    echo "  $0 docker-compose                    # Deploy with Docker Compose"
+    echo "  $0 kubernetes                        # Deploy with Kubernetes"
+    echo "  $0 cleanup                           # Remove all cluster resources"
+    echo "  FORCE_REGENERATE=true $0 docker-compose  # Deploy with fresh SSL certs"
+    echo ""
+    echo "SSL Certificate Management:"
+    echo "  - Certificates are generated automatically with random serial numbers"
+    echo "  - Use FORCE_REGENERATE=true to generate new certificates"
+    echo "  - Use cleanup-ssl to remove existing certificates"
     echo ""
 }
 
@@ -297,6 +337,9 @@ case "$1" in
         ;;
     "cleanup")
         cleanup
+        ;;
+    "cleanup-ssl")
+        cleanup_ssl
         ;;
     "health")
         run_health_checks
