@@ -5,24 +5,24 @@
 | Document | Description | Quick Links |
 |----------|-------------|-------------|
 | 📖 **[README.md](./README.md)** | Project overview and quick start | *You are here* |
-| 📋 **[Question_Readme.md](./Question_Readme.md)** | Original challenge requirements | [Challenge Overview](./Question_Readme.md#the-challenge) • [API Endpoints](./Question_Readme.md#post-blocks) • [Testing Requirements](./Question_Readme.md#tests) |
+|  **[Question_Readme.md](./Question_Readme.md)** | Original challenge requirements | [Challenge Overview](./Question_Readme.md#the-challenge) • [API Endpoints](./Question_Readme.md#post-blocks) • [Testing Requirements](./Question_Readme.md#tests) |
 | 🏗️ **[Design.md](./Design.md)** | Complete architecture and technical design | [Architecture](./Design.md#️-production-architecture) • [Components](./Design.md#-core-components) • [Performance](./Design.md#-performance-targets) |
-| 🚀 **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** | Production cluster implementation guide | [Quick Start](./IMPLEMENTATION.md#-quick-start) • [Infrastructure](./IMPLEMENTATION.md#️-complete-infrastructure) • [Testing](./IMPLEMENTATION.md#-comprehensive-testing-suite) |
+|  **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** | Production cluster implementation guide | [Quick Start](./IMPLEMENTATION.md#-quick-start) • [Infrastructure](./IMPLEMENTATION.md#️-complete-infrastructure) • [Testing](./IMPLEMENTATION.md#-comprehensive-testing-suite) |
 | 🧭 **[CODE_TOUR.md](./CODE_TOUR.md)** | Complete code walkthrough and explanation | [Core App](./CODE_TOUR.md#️-core-application-architecture) • [Database](./CODE_TOUR.md#-2-database-layer-srcdatabasets) • [API](./CODE_TOUR.md#-5-http-api-server-srcindexts) |
 | 🏦 **[Address Tracking Guide](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md)** | Bitcoin address monitoring documentation | [Famous Addresses](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md#-famous-bitcoin-addresses-to-track) • [Dashboard](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md#-interactive-tracking-dashboard) |
 | ⚙️ **[Configuration Guide](./config/README.md)** | Environment and configuration management | [Environment Setup](./config/README.md#setting-the-environment) • [Configuration Structure](./config/README.md#configuration-structure) • [Environment Variables](./config/README.md#environment-variable-overrides) |
-| 🔧 **[VS Code Setup](./.vscode/README.md)** | Development environment and debugging | [Debug Configurations](./.vscode/README.md#-debug-configurations) • [Development Tasks](./.vscode/README.md#-tasks) • [Recommended Extensions](./.vscode/README.md#-recommended-extensions) |
+|  **[VS Code Setup](./.vscode/README.md)** | Development environment and debugging | [Debug Configurations](./.vscode/README.md#-debug-configurations) • [Development Tasks](./.vscode/README.md#-tasks) • [Recommended Extensions](./.vscode/README.md#-recommended-extensions) |
 | 🐳 **[Cluster Overview](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md)** | Production infrastructure documentation | [Cluster Architecture](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md) • [Deployment Guide](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md) • [Monitoring Setup](./backend-engineer-test-cluster/CLUSTER_OVERVIEW.md) |
-| 📊 **[Cluster Status](./backend-engineer-test-cluster/CLUSTER_STATUS.md)** | Real-time cluster monitoring and health | [Health Checks](./backend-engineer-test-cluster/CLUSTER_STATUS.md) • [Performance Metrics](./backend-engineer-test-cluster/CLUSTER_STATUS.md) • [Troubleshooting](./backend-engineer-test-cluster/CLUSTER_STATUS.md) |
-| 🚀 **[Cluster README](./backend-engineer-test-cluster/README.md)** | Cluster-specific setup and operations | [Quick Start](./backend-engineer-test-cluster/README.md) • [Deployment](./backend-engineer-test-cluster/README.md) • [Testing](./backend-engineer-test-cluster/README.md) |
+|  **[Cluster Status](./backend-engineer-test-cluster/CLUSTER_STATUS.md)** | Real-time cluster monitoring and health | [Health Checks](./backend-engineer-test-cluster/CLUSTER_STATUS.md) • [Performance Metrics](./backend-engineer-test-cluster/CLUSTER_STATUS.md) • [Troubleshooting](./backend-engineer-test-cluster/CLUSTER_STATUS.md) |
+|  **[Cluster README](./backend-engineer-test-cluster/README.md)** | Cluster-specific setup and operations | [Quick Start](./backend-engineer-test-cluster/README.md) • [Deployment](./backend-engineer-test-cluster/README.md) • [Testing](./backend-engineer-test-cluster/README.md) |
 
 ---
 
-## 🎯 **Original Challenge Requirements**
+##  **Original Challenge Requirements**
 
 This project was built for the **EMURGO Backend Engineer Challenge** - creating a UTXO blockchain indexer that tracks address balances. The original requirements have been **fully implemented and significantly enhanced**.
 
-### **📋 Original Challenge Overview**
+### ** Original Challenge Overview**
 - **Goal**: Create an indexer that keeps track of the balance of each address in a blockchain
 - **Runtime**: Bun with TypeScript
 - **Database**: PostgreSQL (provided setup)
@@ -59,9 +59,9 @@ Output = {
 ```
 
 **Validation Requirements:**
-- ✅ **Height Validation**: Must be exactly one unit higher than current height
-- ✅ **Balance Validation**: Sum of inputs must equal sum of outputs
-- ✅ **Hash Validation**: Block ID must be SHA256(height + transaction1.id + transaction2.id + ...)
+-  **Height Validation**: Must be exactly one unit higher than current height
+-  **Balance Validation**: Sum of inputs must equal sum of outputs
+-  **Hash Validation**: Block ID must be SHA256(height + transaction1.id + transaction2.id + ...)
 
 #### **2. `GET /balance/:address`**
 Return the current balance of the given address.
@@ -70,12 +70,12 @@ Return the current balance of the given address.
 Rollback blockchain state to specified height (max 2000 blocks).
 
 ### **🧪 Testing Requirements**
-- ✅ Write tests for all operations
-- ✅ Handle errors and edge cases
-- ✅ Test database layer and API layer
-- ✅ Create abstractions and mock dependencies
+-  Write tests for all operations
+-  Handle errors and edge cases
+-  Test database layer and API layer
+-  Create abstractions and mock dependencies
 
-### **📊 Example Workflow (Original Challenge)**
+### ** Example Workflow (Original Challenge)**
 ```json
 // Block 1: Genesis
 {
@@ -109,23 +109,23 @@ POST /rollback?height=2
 
 ---
 
-## 🚀 **Enhanced Implementation**
+##  **Enhanced Implementation**
 
 While the original challenge required basic functionality, this implementation delivers **enterprise-grade production infrastructure**:
 
-### **✅ Original Requirements (Fully Met)**
+### ** Original Requirements (Fully Met)**
 - **All 3 Required Endpoints**: POST /blocks, GET /balance, POST /rollback
 - **Complete Validation**: Height, balance, hash validation with detailed error messages
 - **Comprehensive Testing**: 100% test coverage across multiple languages
 - **Error Handling**: Robust edge case handling and graceful degradation
 - **Database Integration**: Optimized PostgreSQL with UTXO-specific schemas
 
-### **🚀 Enterprise Enhancements**
+### ** Enterprise Enhancements**
 - **🏗️ Production Infrastructure**: Complete cluster with HAProxy, monitoring, caching
 - **🔗 Dynamic Service Discovery**: Kong ↔ Consul integration for zero-downtime scaling
 - **⚡ High Performance**: Sub-second response times with connection pooling
 - **🔄 High Availability**: Multi-instance deployment with automatic failover
-- **📊 Real-time Monitoring**: Prometheus + Grafana + health checks
+- ** Real-time Monitoring**: Prometheus + Grafana + health checks
 - **🏦 Bitcoin Address Tracking**: Monitor famous addresses in real-time
 - **🧪 Advanced Testing**: Shell, Python, Node.js test suites
 - **📖 Complete Documentation**: Architecture, implementation, code tour guides
@@ -156,9 +156,9 @@ docker-compose -f docker-compose.simple.yml up -d
 - **Consul UI**: http://localhost:8500  
 - **Kong Admin GUI**: http://localhost:8002
 
-## 🎯 **Key Features**
+##  **Key Features**
 
-### **✅ Core UTXO Functionality**
+### ** Core UTXO Functionality**
 - **Block Processing**: Full validation with SHA256 hash verification
 - **Balance Tracking**: Real-time address balance queries  
 - **Rollback Support**: Blockchain state rollback to any height
@@ -179,14 +179,14 @@ docker-compose -f docker-compose.simple.yml up -d
 - **Multiple Formats**: P2PKH, P2SH, Bech32 address support
 - **Export Capabilities**: JSON data export functionality
 
-## 📊 **Performance & Scale**
+##  **Performance & Scale**
 
 | Metric | Target | Achieved |
 |--------|--------|----------|
-| **Response Time** | < 50ms | ✅ < 10ms (cached) |
-| **Throughput** | 1000+ TPS | ✅ Load tested |
-| **Availability** | 99.9% | ✅ Multi-instance HA |
-| **Test Coverage** | 100% | ✅ All components |
+| **Response Time** | < 50ms |  < 10ms (cached) |
+| **Throughput** | 1000+ TPS |  Load tested |
+| **Availability** | 99.9% |  Multi-instance HA |
+| **Test Coverage** | 100% |  All components |
 
 ## 🧪 **Testing & Development**
 
@@ -234,10 +234,10 @@ Internet → HAProxy → Kong Gateway → Consul DNS → [API-1, API-2, API-3] �
 
 **Key Components:**
 - **🌐 Load Balancer**: HAProxy with health checks and failover
-- **🚀 API Cluster**: 3x Bun.js instances for high availability  
+- ** API Cluster**: 3x Bun.js instances for high availability  
 - **💾 Database**: PostgreSQL with UTXO-optimized schema
 - **⚡ Cache**: Redis for hot data acceleration
-- **📊 Monitoring**: Complete observability stack
+- ** Monitoring**: Complete observability stack
 
 ## 📖 **API Endpoints**
 
@@ -260,17 +260,17 @@ curl -X POST http://localhost:80/blocks \
 curl http://localhost:80/balance/1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
 ```
 
-## 🎯 **Next Steps**
+##  **Next Steps**
 
 ### **For Developers**
 1. 📖 **Read**: [CODE_TOUR.md](./CODE_TOUR.md) - Complete code walkthrough
 2. 🏗️ **Study**: [Design.md](./Design.md) - Architecture deep dive  
 3. 🧪 **Test**: Run the comprehensive test suites
-4. 🔧 **Extend**: Add new features using the existing patterns
+4.  **Extend**: Add new features using the existing patterns
 
 ### **For DevOps**
-1. 🚀 **Deploy**: [IMPLEMENTATION.md](./IMPLEMENTATION.md) - Production deployment guide
-2. 📊 **Monitor**: Set up Grafana dashboards and alerts
+1.  **Deploy**: [IMPLEMENTATION.md](./IMPLEMENTATION.md) - Production deployment guide
+2.  **Monitor**: Set up Grafana dashboards and alerts
 3. 🔍 **Scale**: Use Kubernetes manifests for larger deployments
 4. 🛡️ **Secure**: Implement additional security layers
 
@@ -278,17 +278,17 @@ curl http://localhost:80/balance/1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
 1. 🏦 **Track**: Use the [address tracking system](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md)
 2. 🧪 **Test**: Try the REST Client extension with `api-test.http`
 3. 📱 **Monitor**: Access the interactive dashboards
-4. 📊 **Analyze**: Export data for analysis
+4.  **Analyze**: Export data for analysis
 
 ---
 
-## 📁 **Project Structure**
+##  **Project Structure**
 
 ```
 backend-engineer-test/
 ├── 📖 README.md                    # This file - project overview
 ├── 🏗️ Design.md                   # Complete architecture documentation  
-├── 🚀 IMPLEMENTATION.md            # Production deployment guide
+├──  IMPLEMENTATION.md            # Production deployment guide
 ├── 🧭 CODE_TOUR.md                # Complete code walkthrough
 ├── 🧪 api-test.http               # REST Client API testing
 ├── src/                           # Core application code
@@ -302,12 +302,12 @@ backend-engineer-test/
     ├── 🐳 docker-compose.simple.yml   # Core cluster deployment
     ├── 🧪 test-cluster.sh             # Shell testing automation
     ├── 🐍 test-cluster.py             # Python async testing
-    ├── 📊 track-addresses.sh          # Interactive address tracking
+    ├──  track-addresses.sh          # Interactive address tracking
     └── 📖 UTXO_TRACKING_GUIDE.md      # Address tracking documentation
 ```
 
 ---
 
-**🎉 Ready for Production • Enterprise Grade • 100% Test Coverage**
+** Ready for Production • Enterprise Grade • 100% Test Coverage**
 
 *Built with Bun • TypeScript • Fastify • PostgreSQL • Redis • HAProxy • Docker*

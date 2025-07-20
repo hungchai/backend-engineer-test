@@ -130,6 +130,11 @@ export class BlockValidator {
     block: Block,
     context: BlockValidationContext
   ): Promise<ValidationError | null> {
+    // For transactions with no inputs (e.g., coinbase), there's no balance to check
+    if (context.totalInputValue === 0 && block.transactions.every(tx => tx.inputs.length === 0)) {
+      return null;
+    }
+
     if (context.totalInputValue !== context.totalOutputValue) {
       return {
         type: 'BALANCE_VALIDATION',

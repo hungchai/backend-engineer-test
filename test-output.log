@@ -1,0 +1,4 @@
+bun test v1.2.18 (0d4089ea)
+
+spec/indexer.spec.ts:
+Setting up test database with testcontainers...

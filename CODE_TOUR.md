@@ -1,7 +1,7 @@
-# 🚀 UTXO Blockchain Indexer - Code Tour Guide
+#  UTXO Blockchain Indexer - Code Tour Guide
 
 ## 📚 **Documentation Navigation**
-🏠 [README](./README.md) • 🏗️ [Architecture Design](./Design.md) • 🚀 [Implementation Guide](./IMPLEMENTATION.md) • 🏦 [Address Tracking](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md)
+🏠 [README](./README.md) • 🏗️ [Architecture Design](./Design.md) •  [Implementation Guide](./IMPLEMENTATION.md) • 🏦 [Address Tracking](./backend-engineer-test-cluster/UTXO_TRACKING_GUIDE.md)
 
 ---
 
@@ -15,7 +15,7 @@ Welcome to the complete code walkthrough of our enterprise-grade UTXO blockchain
 - 🔍 Validation and security mechanisms
 - 🧪 Comprehensive testing strategies
 - 🌐 Production cluster infrastructure
-- 📊 Monitoring and observability setup
+-  Monitoring and observability setup
 
 ---
 
@@ -47,7 +47,7 @@ backend-engineer-test/
 
 ---
 
-## 📊 **1. Data Models & Types (`src/types.ts`)**
+##  **1. Data Models & Types (`src/types.ts`)**
 
 This file defines the complete type system for our UTXO blockchain indexer.
 
@@ -130,10 +130,10 @@ export interface BlockValidationContext {
 ```
 
 **Key Design Decisions:**
-- 🎯 **Performance**: Uses `Map` for O(1) UTXO lookups during validation
+-  **Performance**: Uses `Map` for O(1) UTXO lookups during validation
 - 🔢 **Precision**: `bigint` for database values to handle large Bitcoin amounts
 - 🛡️ **Type Safety**: Strict TypeScript interfaces prevent runtime errors
-- 📊 **Monitoring**: Built-in metrics types for observability
+-  **Monitoring**: Built-in metrics types for observability
 
 ---
 
@@ -246,7 +246,7 @@ async getAddressBalance(address: string): Promise<number> {
 - 🔗 **Connection Pooling**: Reuses database connections
 - 📝 **Prepared Statements**: Pre-compiled queries for speed
 - 🔄 **Transactions**: ACID compliance with rollback on errors
-- 📊 **Materialized Balances**: Pre-computed for O(1) lookups
+-  **Materialized Balances**: Pre-computed for O(1) lookups
 - 🗂️ **Strategic Indexes**: Optimized for UTXO queries
 
 ---
@@ -413,7 +413,7 @@ async rollback(targetHeight: number): Promise<RollbackResult> {
 **Engine Features:**
 - ⚡ **Performance Monitoring**: Detailed timing metrics
 - 🔄 **Atomic Operations**: Database transactions for consistency
-- 📊 **Batch Processing**: Optimized for multiple transactions
+-  **Batch Processing**: Optimized for multiple transactions
 - 🎛️ **Configurable Limits**: Rollback depth protection
 - 🚨 **Error Propagation**: Comprehensive error handling
 
@@ -577,11 +577,11 @@ fastify.get('/metrics', async (request, reply) => {
 ```
 
 **Server Features:**
-- 🚀 **High Performance**: Fastify framework optimized for speed
+-  **High Performance**: Fastify framework optimized for speed
 - 📝 **Structured Logging**: Pino logger with configurable levels
 - 🔍 **Request Validation**: Type-safe parameter handling
 - 🚨 **Error Handling**: Comprehensive error responses with proper HTTP codes
-- 📊 **Health Monitoring**: Built-in health checks and metrics
+-  **Health Monitoring**: Built-in health checks and metrics
 - ⚡ **Performance Settings**: Optimized for production workloads
 
 ---
@@ -831,7 +831,7 @@ echo "🧪 UTXO Cluster Testing Suite"
 echo "=============================="
 
 # Test 1: Container Health
-echo "📋 Testing container health..."
+echo " Testing container health..."
 docker-compose -f docker-compose.simple.yml ps
 
 # Test 2: Database Connectivity
@@ -839,7 +839,7 @@ echo "🗄️  Testing database connectivity..."
 curl -s "http://localhost:80/health" | jq '.'
 
 # Test 3: API Instance Health
-echo "🚀 Testing API instance health..."
+echo " Testing API instance health..."
 for port in 3001 3002 3003; do
     echo "Testing API instance on port $port..."
     curl -s "http://localhost:$port/health" | jq '.status'
@@ -860,7 +860,7 @@ for i in {1..50}; do
 done
 wait
 
-echo "✅ All tests completed!"
+echo " All tests completed!"
 ```
 
 #### **Python Async Testing (`test-cluster.py`)**
@@ -897,7 +897,7 @@ class UTXOClusterTester:
                     "response": result
                 })
                 
-                print(f"✅ Cluster Health: {result.get('status', 'unknown')}")
+                print(f" Cluster Health: {result.get('status', 'unknown')}")
                 
         except Exception as e:
             self.results["tests"].append({
@@ -905,7 +905,7 @@ class UTXOClusterTester:
                 "status": "ERROR",
                 "error": str(e)
             })
-            print(f"❌ Cluster Health: {e}")
+            print(f" Cluster Health: {e}")
 
     async def test_load_balancing(self, session: aiohttp.ClientSession):
         """Test load balancer distribution"""
@@ -927,7 +927,7 @@ class UTXOClusterTester:
             "failure_rate": (100 - success_count) / 100
         })
         
-        print(f"✅ Load Balancing: {success_count}/100 requests successful")
+        print(f" Load Balancing: {success_count}/100 requests successful")
 
     async def run_all_tests(self):
         """Run comprehensive test suite"""
@@ -976,10 +976,10 @@ class UTXOClusterTester {
       };
       
       this.results.tests.push(test);
-      console.log(`✅ Cluster Health: ${result.status}`);
+      console.log(` Cluster Health: ${result.status}`);
       
     } catch (error) {
-      console.log(`❌ Cluster Health: ${error.message}`);
+      console.log(` Cluster Health: ${error.message}`);
       this.results.tests.push({
         name: 'cluster_health',
         status: 'ERROR',
@@ -1001,23 +1001,23 @@ class UTXOClusterTester {
         const response = await fetch(`${this.baseUrl}/balance/${address}`);
         const result = await response.json();
         
-        console.log(`   📊 ${address}: ${result.balance} (balance)`);
+        console.log(`    ${address}: ${result.balance} (balance)`);
         
       } catch (error) {
-        console.log(`   ❌ ${address}: ${error.message}`);
+        console.log(`    ${address}: ${error.message}`);
       }
     }
   }
 
   async runAllTests() {
-    console.log('🚀 UTXO Cluster Test Suite');
+    console.log(' UTXO Cluster Test Suite');
     console.log('='.repeat(50));
     
     await this.testClusterHealth();
     await this.testAddressTracking();
     await this.testPerformance();
     
-    console.log('\n📊 Test Summary:');
+    console.log('\n Test Summary:');
     console.log(JSON.stringify(this.results.summary, null, 2));
   }
 }
@@ -1048,7 +1048,7 @@ track_address() {
     local address=$1
     local description=$2
     
-    echo -n "📊 $description ($address): "
+    echo -n " $description ($address): "
     
     response=$(curl -s "$UTXO_API_URL/balance/$address")
     
@@ -1056,12 +1056,12 @@ track_address() {
         balance=$(echo "$response" | jq -r '.balance // "0"')
         echo "${balance} BTC"
     else
-        echo "❌ Error"
+        echo " Error"
     fi
 }
 
 track_famous_addresses() {
-    echo "🌟 Famous Bitcoin Addresses:"
+    echo " Famous Bitcoin Addresses:"
     echo "----------------------------"
     
     track_address "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" "Satoshi Genesis"
@@ -1084,7 +1084,7 @@ done
 
 ---
 
-## 📊 **8. Monitoring & Observability**
+##  **8. Monitoring & Observability**
 
 ### **Prometheus Metrics (`prometheus/prometheus-simple.yml`)**
 ```yaml
@@ -1159,19 +1159,19 @@ scrape_configs:
 
 ---
 
-## 🎯 **Key Implementation Highlights**
+##  **Key Implementation Highlights**
 
 ### **Performance Optimizations**
 - ⚡ **Bun Runtime**: Zero-copy operations, minimal GC pressure
 - 🔗 **Connection Pooling**: Persistent database connections
-- 📊 **Materialized Balances**: O(1) balance lookups
+-  **Materialized Balances**: O(1) balance lookups
 - 🗂️ **Strategic Indexes**: Optimized for UTXO queries
 - 💾 **Redis Caching**: Hot data acceleration
 
 ### **High Availability Features**
 - 🔄 **Load Balancing**: HAProxy with health checks
 - 🏥 **Health Monitoring**: Comprehensive health endpoints
-- 🔧 **Graceful Degradation**: Continues operation during failures
+-  **Graceful Degradation**: Continues operation during failures
 - 📈 **Horizontal Scaling**: Multi-instance deployment
 - 🛡️ **Error Recovery**: Circuit breakers and fallbacks
 
@@ -1185,13 +1185,13 @@ scrape_configs:
 ### **Developer Experience**
 - 📝 **Type Safety**: Strict TypeScript interfaces
 - 🧪 **100% Test Coverage**: Comprehensive test suite
-- 📊 **Detailed Monitoring**: Metrics and observability
+-  **Detailed Monitoring**: Metrics and observability
 - 📖 **Documentation**: Complete API and code documentation
-- 🔧 **Easy Deployment**: Docker Compose orchestration
+-  **Easy Deployment**: Docker Compose orchestration
 
 ---
 
-## 🚀 **Getting Started with the Code**
+##  **Getting Started with the Code**
 
 ### **1. Understanding the Flow**
 ```
@@ -1236,7 +1236,7 @@ docker-compose -f docker-compose.simple.yml up -d
 
 ---
 
-## 🎉 **Conclusion**
+##  **Conclusion**
 
 This codebase demonstrates enterprise-grade software engineering with:
 
@@ -1244,9 +1244,9 @@ This codebase demonstrates enterprise-grade software engineering with:
 - ⚡ **High Performance**: Optimized for speed and scalability
 - 🛡️ **Robust Security**: Comprehensive validation and error handling
 - 🧪 **Quality Assurance**: 100% test coverage across multiple test types
-- 📊 **Observability**: Built-in monitoring and metrics
-- 🚀 **Production Ready**: Complete deployment infrastructure
+-  **Observability**: Built-in monitoring and metrics
+-  **Production Ready**: Complete deployment infrastructure
 
 Whether you're building on this foundation or learning from the implementation, this codebase showcases modern best practices for building scalable blockchain infrastructure.
 
-**Happy coding! 🚀**
+**Happy coding! **

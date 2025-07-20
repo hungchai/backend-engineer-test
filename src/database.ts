@@ -126,7 +126,7 @@ export class Database {
   async getUTXOsForInputs(inputs: Array<{ txId: string, index: number }>): Promise<Map<string, DBUTXO>> {
     if (inputs.length === 0) return new Map();
 
-    const conditions = inputs.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(',');
+    const conditions = inputs.map((_, i) => `($${i * 2 + 1}::text, $${i * 2 + 2}::integer)`).join(',');
     const values = inputs.flatMap(input => [input.txId, input.index]);
 
     const result = await this.pool.query(
