@@ -191,7 +191,7 @@ async processBlock(block: Block): Promise<BlockProcessingResult> {
     
     // 2. Process all transactions
     for (const tx of block.transactions) {
-      await this.insertTransaction(client, tx, block.id, block.height);
+      await this.processTransaction(client, tx, block.id, block.height);
       
       // 3. Mark input UTXOs as spent
       for (const input of tx.inputs) {
@@ -705,9 +705,7 @@ services:
     volumes:
       - ./haproxy/haproxy-simple.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     depends_on:
-      - utxo-api-1
-      - utxo-api-2
-      - utxo-api-3
+      - consul-1  # HAProxy relies on Consul’s catalog for utxo-api targets
     restart: unless-stopped
 
   # UTXO API Instances (High Availability)
@@ -819,10 +817,8 @@ backend utxo_backend
     balance roundrobin
     option httpchk GET /health
     http-check expect status 200
-    
-    server api1 utxo-api-1:3000 check inter 10s
-    server api2 utxo-api-2:3000 check inter 10s
-    server api3 utxo-api-3:3000 check inter 10s
+    # Dynamic discovery via Consul DNS (no static targets)
+    server-template api 3 utxo-api.service.consul:3000 check inter 10s resolve-prefer ipv4
 ```
 
 ### **Testing Automation**
@@ -1099,7 +1095,7 @@ global:
 scrape_configs:
   - job_name: 'utxo-api'
     static_configs:
-      - targets: ['utxo-api-1:3000', 'utxo-api-2:3000', 'utxo-api-3:3000']
+      - targets: ['utxo-api.service.consul:3000']  # Consul-resolved
     metrics_path: '/metrics'
     scrape_interval: 10s
 

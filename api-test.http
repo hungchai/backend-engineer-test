@@ -2,7 +2,7 @@
 # Use this file with the REST Client VS Code extension
 
 ### Variables for Local Development
-@baseUrl = http://localhost:3000
+@baseUrl = http://localhost:3001
 @contentType = application/json
 
 ### Variables for Cluster (Load Balanced)

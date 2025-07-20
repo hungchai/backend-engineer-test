@@ -19,7 +19,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://postgres:password@db:5432/utxo_indexer}
     ports:
-      - "3000:3000"
+      - "3001:3001"
 
 volumes:
   db_data:

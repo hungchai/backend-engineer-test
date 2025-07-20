@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from 'pg';
+import { Pool, type PoolClient } from 'pg';
 import type {
   Block,
   DBBlock,
@@ -156,16 +156,26 @@ export class Database {
     try {
       await client.query('BEGIN');
 
-      // Insert block
-      await client.query(
-        'INSERT INTO blocks (id, height) VALUES ($1, $2)',
-        [block.id, block.height]
-      );
+      // 1. Insert block record
+      await this.insertBlock(client, block);
 
-      // Process each transaction
+      // 2. Process all transactions
       for (const tx of block.transactions) {
         await this.processTransaction(client, tx, block.id, block.height);
+
+        // 3. Mark input UTXOs as spent
+        for (const input of tx.inputs) {
+          await this.markUTXOSpent(client, input.txId, input.index, tx.id);
+        }
+
+        // 4. Create new output UTXOs
+        for (let i = 0; i < tx.outputs.length; i++) {
+          await this.createUTXO(client, tx.id, i, tx.outputs[i], block.height);
+        }
       }
+
+      // 5. Update address balances
+      await this.updateAddressBalances(client, block);
 
       await client.query('COMMIT');
     } catch (error) {
@@ -176,47 +186,80 @@ export class Database {
     }
   }
 
+  private async insertBlock(client: PoolClient, block: Block): Promise<void> {
+    await client.query(
+      'INSERT INTO blocks (id, height) VALUES ($1, $2)',
+      [block.id, block.height]
+    );
+  }
+
   private async processTransaction(
     client: PoolClient,
     tx: Transaction,
     blockId: string,
     blockHeight: number
   ): Promise<void> {
-    // Insert transaction
+    // Insert transaction record
     await client.query(
       'INSERT INTO transactions (id, block_id, block_height) VALUES ($1, $2, $3)',
       [tx.id, blockId, blockHeight]
     );
+  }
 
-    // Process inputs (mark UTXOs as spent)
-    for (const input of tx.inputs) {
-      await client.query(
-        'UPDATE utxos SET spent = TRUE, spent_in_tx = $1 WHERE tx_id = $2 AND output_index = $3',
-        [tx.id, input.txId, input.index]
-      );
+  private async markUTXOSpent(
+    client: PoolClient,
+    txId: string,
+    index: number,
+    spentInTx: string
+  ): Promise<void> {
+    await client.query(
+      'UPDATE utxos SET spent = TRUE, spent_in_tx = $1 WHERE tx_id = $2 AND output_index = $3',
+      [spentInTx, txId, index]
+    );
+  }
 
-      // Update address balance (decrease)
-      const utxo = await client.query(
-        'SELECT address, value FROM utxos WHERE tx_id = $1 AND output_index = $2',
-        [input.txId, input.index]
-      );
+  private async createUTXO(
+    client: PoolClient,
+    txId: string,
+    index: number,
+    output: { address: string; value: number },
+    blockHeight: number
+  ): Promise<void> {
+    await client.query(
+      'INSERT INTO utxos (tx_id, output_index, address, value, block_height) VALUES ($1, $2, $3, $4, $5)',
+      [txId, index, output.address, output.value, blockHeight]
+    );
+  }
 
-      if (utxo.rows[0]) {
-        await this.updateAddressBalance(client, utxo.rows[0].address, -BigInt(utxo.rows[0].value), blockHeight);
+  private async updateAddressBalances(client: PoolClient, block: Block): Promise<void> {
+    // Calculate balance changes for all affected addresses
+    const balanceChanges = new Map<string, bigint>();
+
+    for (const tx of block.transactions) {
+      // Process inputs (decrease balances)
+      for (const input of tx.inputs) {
+        const utxo = await client.query(
+          'SELECT address, value FROM utxos WHERE tx_id = $1 AND output_index = $2',
+          [input.txId, input.index]
+        );
+
+        if (utxo.rows[0]) {
+          const address = utxo.rows[0].address;
+          const value = BigInt(utxo.rows[0].value);
+          balanceChanges.set(address, (balanceChanges.get(address) || 0n) - value);
+        }
+      }
+
+      // Process outputs (increase balances)
+      for (const output of tx.outputs) {
+        const value = BigInt(output.value);
+        balanceChanges.set(output.address, (balanceChanges.get(output.address) || 0n) + value);
       }
     }
 
-    // Process outputs (create new UTXOs)
-    for (let i = 0; i < tx.outputs.length; i++) {
-      const output = tx.outputs[i];
-
-      await client.query(
-        'INSERT INTO utxos (tx_id, output_index, address, value, block_height) VALUES ($1, $2, $3, $4, $5)',
-        [tx.id, i, output.address, output.value, blockHeight]
-      );
-
-      // Update address balance (increase)
-      await this.updateAddressBalance(client, output.address, BigInt(output.value), blockHeight);
+    // Apply all balance changes
+    for (const [address, deltaValue] of balanceChanges) {
+      await this.updateAddressBalance(client, address, deltaValue, block.height);
     }
   }
 

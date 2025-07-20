@@ -9,15 +9,18 @@
             "type": "node",
             "request": "launch",
             "program": "${workspaceFolder}/src/index.ts",
-            "runtimeExecutable": "bun",
-            "runtimeArgs": ["--inspect"],
+            "runtimeExecutable": "/Users/tomma/.bun/bin/bun",
+            "runtimeArgs": [
+                "--inspect"
+            ],
             "skipFiles": [
                 "<node_internals>/**",
                 "**/node_modules/**"
             ],
             "env": {
                 "DATABASE_URL": "postgresql://postgres:password@localhost:5432/utxo_indexer",
-                "NODE_ENV": "development"
+                "NODE_ENV": "development",
+                "PORT": "3001"
             },
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen"
@@ -27,8 +30,10 @@
             "type": "node",
             "request": "launch",
             "program": "${workspaceFolder}/src/index.ts",
-            "runtimeExecutable": "bun",
-            "runtimeArgs": ["--inspect-brk"],
+            "runtimeExecutable": "/Users/tomma/.bun/bin/bun",
+            "runtimeArgs": [
+                "--inspect-brk"
+            ],
             "skipFiles": [
                 "<node_internals>/**",
                 "**/node_modules/**"
@@ -46,8 +51,10 @@
             "type": "node",
             "request": "launch",
             "program": "${workspaceFolder}/spec",
-            "runtimeExecutable": "bun",
-            "runtimeArgs": ["test"],
+            "runtimeExecutable": "/Users/tomma/.bun/bin/bun",
+            "runtimeArgs": [
+                "test"
+            ],
             "skipFiles": [
                 "<node_internals>/**",
                 "**/node_modules/**"
@@ -64,8 +71,11 @@
             "type": "node",
             "request": "launch",
             "program": "${workspaceFolder}/spec",
-            "runtimeExecutable": "bun",
-            "runtimeArgs": ["test", "--inspect-brk"],
+            "runtimeExecutable": "/Users/tomma/.bun/bin/bun",
+            "runtimeArgs": [
+                "test",
+                "--inspect-brk"
+            ],
             "skipFiles": [
                 "<node_internals>/**",
                 "**/node_modules/**"
@@ -82,8 +92,10 @@
             "type": "node",
             "request": "launch",
             "program": "${workspaceFolder}/src/index.ts",
-            "runtimeExecutable": "bun",
-            "runtimeArgs": ["--inspect-brk"],
+            "runtimeExecutable": "/Users/tomma/.bun/bin/bun",
+            "runtimeArgs": [
+                "--inspect-brk"
+            ],
             "skipFiles": [
                 "<node_internals>/**",
                 "**/node_modules/**"

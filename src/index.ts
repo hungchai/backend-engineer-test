@@ -289,6 +289,10 @@ async function bootstrap() {
 
   } catch (error) {
     fastify.log.error('Failed to start server:', error);
+    console.error('Full error details:', error);
+    if (error instanceof Error) {
+      console.error('Error stack:', error.stack);
+    }
     process.exit(1);
   }
 }
