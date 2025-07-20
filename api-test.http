@@ -1,59 +1,8 @@
 # UTXO Blockchain Indexer API Tests
 # Use this file with the REST Client VS Code extension
 
-### Variables for Local Development
-@baseUrl = http://localhost:3001
+@baseUrl = http://localhost:3000
 @contentType = application/json
-
-### Variables for Cluster (Load Balanced)
-# @baseUrl = http://localhost:80
-# @contentType = application/json
-
-### Variables for Individual API Instances
-# @api1 = http://localhost:3001
-# @api2 = http://localhost:3002  
-# @api3 = http://localhost:3003
-
-### Cluster Health Checks
-
-### Health Check via Load Balancer
-GET http://localhost:80/health
-
-### Health Check - API Instance 1
-GET http://localhost:3001/health
-
-### Health Check - API Instance 2  
-GET http://localhost:3002/health
-
-### Health Check - API Instance 3
-GET http://localhost:3003/health
-
-### HAProxy Stats
-GET http://localhost:8404/stats
-
-### Grafana Dashboard
-GET http://localhost:3004
-
-### Prometheus Metrics
-GET http://localhost:9091/metrics
-
-### Famous Bitcoin Address Tracking
-
-### Track Satoshi's Genesis Address
-GET http://localhost:80/balance/1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
-
-### Track Largest Bitcoin Address
-GET http://localhost:80/balance/bc1ql49ydapnjafl5t2cp9zqpjwe6pdgmxy98859v2
-
-### Track Binance Hot Wallet
-GET http://localhost:80/balance/1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s
-
-### Track BitGo Cold Storage
-GET http://localhost:80/balance/3M219KJtMVHkjGJWeFTiGNtARKZt9TwqF5
-
-### ========================================
-### Original API Tests (Development)
-### ========================================
 
 ### 1. Get API Information
 GET {{baseUrl}}/
@@ -109,15 +58,10 @@ Content-Type: {{contentType}}
 
 ### 7. Check Balances After Transfer
 GET {{baseUrl}}/balance/addr1
-# Should return 0
 
-### 
 GET {{baseUrl}}/balance/addr2
-# Should return 4
 
-### 
 GET {{baseUrl}}/balance/addr3
-# Should return 6
 
 ### 8. Process Block 3 - Complex Transaction
 POST {{baseUrl}}/blocks
@@ -147,54 +91,32 @@ Content-Type: {{contentType}}
 
 ### 9. Check Final Balances
 GET {{baseUrl}}/balance/addr1
-# Should return 0
 
-### 
 GET {{baseUrl}}/balance/addr2
-# Should return 4
 
-### 
 GET {{baseUrl}}/balance/addr3
-# Should return 0
 
-### 
 GET {{baseUrl}}/balance/addr4
-# Should return 2
 
-### 
 GET {{baseUrl}}/balance/addr5
-# Should return 2
 
-### 
 GET {{baseUrl}}/balance/addr6
-# Should return 2
 
 ### 10. Rollback to Height 2
 POST {{baseUrl}}/rollback?height=2
 
 ### 11. Check Balances After Rollback
 GET {{baseUrl}}/balance/addr1
-# Should return 0
 
-### 
 GET {{baseUrl}}/balance/addr2
-# Should return 4
 
-### 
 GET {{baseUrl}}/balance/addr3
-# Should return 6 (restored)
 
-### 
 GET {{baseUrl}}/balance/addr4
-# Should return 0 (removed)
 
-### 
 GET {{baseUrl}}/balance/addr5
-# Should return 0 (removed)
 
-### 
 GET {{baseUrl}}/balance/addr6
-# Should return 0 (removed)
 
 ### Error Test Cases
 

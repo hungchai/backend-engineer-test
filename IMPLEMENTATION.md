@@ -41,7 +41,7 @@ This repository contains a **complete enterprise-grade UTXO blockchain indexer c
 | **HAProxy Stats** | http://localhost:8404/stats | Load balancer monitoring |
 | **Grafana Dashboard** | http://localhost:3004 | Visual monitoring (admin/admin) |
 | **Prometheus Metrics** | http://localhost:9091 | Metrics collection |
-| **API Instance 1** | http://localhost:3001 | Direct API access |
+| **API Instance 1** | http://localhost:3000 | Direct API access |
 | **API Instance 2** | http://localhost:3002 | Direct API access |
 | **API Instance 3** | http://localhost:3003 | Direct API access |
 
@@ -257,7 +257,7 @@ curl http://localhost:80/metrics
 curl http://localhost:80/health
 
 # Individual API instances
-curl http://localhost:3001/health
+curl http://localhost:3000/health
 curl http://localhost:3002/health  
 curl http://localhost:3003/health
 

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:tes
 import { createHash } from 'crypto';
 import { UTXOIndexer } from '../src/indexer';
 import type { Block, Transaction } from '../src/types';
+import { cleanupTestDatabase, initializeTestDatabase } from './db-init';
 import { setupTestDatabase, teardownTestDatabase } from './test-setup';
 
 describe('UTXO Blockchain Indexer', () => {
@@ -25,47 +26,15 @@ describe('UTXO Blockchain Indexer', () => {
   });
 
   beforeEach(async () => {
-    await testDb.client.query('DROP TABLE IF EXISTS utxos, transactions, blocks, address_balances CASCADE');
-    await testDb.client.query(`
-      CREATE TABLE blocks (
-        id TEXT PRIMARY KEY,
-        height BIGINT UNIQUE NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    await testDb.client.query(`
-      CREATE TABLE transactions (
-        id TEXT PRIMARY KEY,
-        block_id TEXT NOT NULL REFERENCES blocks(id) ON DELETE CASCADE,
-        block_height BIGINT NOT NULL
-      )
-    `);
-    await testDb.client.query(`
-      CREATE TABLE utxos (
-        tx_id TEXT NOT NULL,
-        output_index INTEGER NOT NULL,
-        address TEXT NOT NULL,
-        value BIGINT NOT NULL,
-        spent BOOLEAN DEFAULT FALSE,
-        spent_in_tx TEXT,
-        block_height BIGINT NOT NULL,
-        PRIMARY KEY (tx_id, output_index)
-      )
-    `);
-    await testDb.client.query(`
-      CREATE TABLE address_balances (
-        address TEXT PRIMARY KEY,
-        balance BIGINT NOT NULL DEFAULT 0,
-        last_updated_height BIGINT NOT NULL DEFAULT 0
-      )
-    `);
+    await initializeTestDatabase(testDb.client);
     const dbConfig = {
       connectionString: 'postgresql://postgres:password@localhost:5432/utxo_indexer',
       poolSize: 5,
     };
     const indexerConfig = { database: dbConfig };
     indexer = new UTXOIndexer(indexerConfig as any);
-    await indexer.initialize();
+    // await indexer.initialize();
+    await cleanupTestDatabase(testDb.client);
   });
 
   // Helper function to create valid block hash

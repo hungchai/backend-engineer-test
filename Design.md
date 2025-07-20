@@ -28,7 +28,7 @@ graph TB
     end
     
     subgraph "Application Layer"
-        API1[UTXO API Instance 1<br/>:3001]
+        API1[UTXO API Instance 1<br/>:3000]
         API2[UTXO API Instance 2<br/>:3002]
         API3[UTXO API Instance 3<br/>:3003]
     end

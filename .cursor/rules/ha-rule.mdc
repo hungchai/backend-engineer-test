@@ -1,9 +1,9 @@
 ---
 alwaysApply: true
 ---
-high availability
+stateless
 high performace
 low latency
 no GC
 100% coverage  test
-do technical design to Design.md first
+no emoji

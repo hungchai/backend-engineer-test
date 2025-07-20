@@ -3,11 +3,11 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "start": "PORT=3001 bun src/index.ts",
+    "start": "PORT=3000 bun src/index.ts",
     "run-docker": "docker-compose up -d --build",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "dev": "PORT=3001 bun --watch src/index.ts",
+    "dev": "PORT=3000 bun --watch src/index.ts",
     "build": "bun build src/index.ts --outdir=dist",
     "clean": "rm -rf dist",
     "lint": "echo 'Linting with TypeScript compiler'",
