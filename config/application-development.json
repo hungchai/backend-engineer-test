@@ -1,0 +1,14 @@
+{
+  "cache": {
+    "enabled": false,
+    "ttlSeconds": 300,
+    "maxMemoryMB": 100
+    // Redis is used for cache
+  },
+  "redis": {
+    "url": "redis://localhost:6379"
+  },
+  "logging": {
+    "level": "debug"
+  }
+}

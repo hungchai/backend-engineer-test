@@ -1,0 +1,442 @@
+version: '3.8'
+
+services:
+  # Load Balancer - HAProxy
+  load-balancer:
+    image: haproxy:2.8-alpine
+    container_name: utxo-haproxy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8404:8404" # HAProxy stats
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./ssl:/etc/ssl/certs:ro
+    depends_on:
+      - api-gateway-1
+      - api-gateway-2
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  # API Gateway - Kong
+  api-gateway-1:
+    image: kong:latest
+    container_name: utxo-kong-1
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001"
+      KONG_ADMIN_GUI_URL: "http://localhost:8002"
+      KONG_DNS_RESOLVER: "consul-1:8600"
+    volumes:
+      - ./kong/kong.yml:/kong/declarative/kong.yml:ro
+    ports:
+      - "8001:8001" # Admin API
+      - "8002:8002" # Admin GUI
+    depends_on:
+      - redis-cluster-1
+    networks:
+      - backend
+    restart: unless-stopped
+
+  api-gateway-2:
+    image: kong:latest
+    container_name: utxo-kong-2
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_DNS_RESOLVER: "consul-1:8600"
+    volumes:
+      - ./kong/kong.yml:/kong/declarative/kong.yml:ro
+    depends_on:
+      - redis-cluster-1
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # UTXO Indexer API Instances
+  utxo-api-1:
+    build: ../
+    container_name: utxo-api-1
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres-primary:5432/utxo_indexer
+      - REDIS_URL=redis://redis-cluster-1:6379
+      - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
+      - CONSUL_URL=http://consul-1:8500
+      - NODE_ENV=production
+      - API_INSTANCE_ID=api-1
+    depends_on:
+      - postgres-primary
+      - redis-cluster-1
+      - kafka-1
+    networks:
+      - backend
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  utxo-api-2:
+    build: ../
+    container_name: utxo-api-2
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres-replica-1:5432/utxo_indexer
+      - REDIS_URL=redis://redis-cluster-2:6379
+      - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
+      - CONSUL_URL=http://consul-1:8500
+      - NODE_ENV=production
+      - API_INSTANCE_ID=api-2
+    depends_on:
+      - postgres-replica-1
+      - redis-cluster-2
+      - kafka-2
+    networks:
+      - backend
+    restart: unless-stopped
+
+  utxo-api-3:
+    build: ../
+    container_name: utxo-api-3
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres-replica-2:5432/utxo_indexer
+      - REDIS_URL=redis://redis-cluster-3:6379
+      - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
+      - CONSUL_URL=http://consul-1:8500
+      - NODE_ENV=production
+      - API_INSTANCE_ID=api-3
+    depends_on:
+      - postgres-replica-2
+      - redis-cluster-3
+      - kafka-3
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # PostgreSQL Cluster
+  postgres-primary:
+    image: postgres:15-alpine
+    container_name: utxo-postgres-primary
+    environment:
+      POSTGRES_DB: utxo_indexer
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_REPLICATION_MODE: master
+      POSTGRES_REPLICATION_USER: replicator
+      POSTGRES_REPLICATION_PASSWORD: replicator_password
+    volumes:
+      - postgres_primary_data:/var/lib/postgresql/data
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./postgres/init-replication.sh:/docker-entrypoint-initdb.d/init-replication.sh:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+
+  postgres-replica-1:
+    image: postgres:15-alpine
+    container_name: utxo-postgres-replica-1
+    environment:
+      POSTGRES_MASTER_SERVICE: postgres-primary
+      POSTGRES_REPLICATION_MODE: slave
+      POSTGRES_REPLICATION_USER: replicator
+      POSTGRES_REPLICATION_PASSWORD: replicator_password
+    volumes:
+      - postgres_replica_1_data:/var/lib/postgresql/data
+    depends_on:
+      - postgres-primary
+    networks:
+      - backend
+    restart: unless-stopped
+
+  postgres-replica-2:
+    image: postgres:15-alpine
+    container_name: utxo-postgres-replica-2
+    environment:
+      POSTGRES_MASTER_SERVICE: postgres-primary
+      POSTGRES_REPLICATION_MODE: slave
+      POSTGRES_REPLICATION_USER: replicator
+      POSTGRES_REPLICATION_PASSWORD: replicator_password
+    volumes:
+      - postgres_replica_2_data:/var/lib/postgresql/data
+    depends_on:
+      - postgres-primary
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # Redis Cluster
+  redis-cluster-1:
+    image: redis:7-alpine
+    container_name: utxo-redis-1
+    command: redis-server /etc/redis/redis.conf
+    volumes:
+      - redis_1_data:/data
+      - ./redis/redis-cluster.conf:/etc/redis/redis.conf:ro
+    ports:
+      - "6379:6379"
+      - "16379:16379"
+    networks:
+      - backend
+    restart: unless-stopped
+
+  redis-cluster-2:
+    image: redis:7-alpine
+    container_name: utxo-redis-2
+    command: redis-server /etc/redis/redis.conf
+    volumes:
+      - redis_2_data:/data
+      - ./redis/redis-cluster.conf:/etc/redis/redis.conf:ro
+    ports:
+      - "6380:6379"
+      - "16380:16379"
+    networks:
+      - backend
+    restart: unless-stopped
+
+  redis-cluster-3:
+    image: redis:7-alpine
+    container_name: utxo-redis-3
+    command: redis-server /etc/redis/redis.conf
+    volumes:
+      - redis_3_data:/data
+      - ./redis/redis-cluster.conf:/etc/redis/redis.conf:ro
+    ports:
+      - "6381:6379"
+      - "16381:16379"
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # Kafka Cluster
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: utxo-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    networks:
+      - backend
+    restart: unless-stopped
+
+  kafka-1:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: utxo-kafka-1
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka_1_data:/var/lib/kafka/data
+    networks:
+      - backend
+    restart: unless-stopped
+
+  kafka-2:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: utxo-kafka-2
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    volumes:
+      - kafka_2_data:/var/lib/kafka/data
+    networks:
+      - backend
+    restart: unless-stopped
+
+  kafka-3:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: utxo-kafka-3
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    volumes:
+      - kafka_3_data:/var/lib/kafka/data
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # Service Discovery - Consul
+  consul-1:
+    image: consul:1.16
+    container_name: utxo-consul-1
+    command: consul agent -server -ui -node=consul-1 -bootstrap-expect=3 -client=0.0.0.0
+    ports:
+      - "8500:8500"
+    volumes:
+      - consul_1_data:/consul/data
+      - ./consul/consul.json:/consul/config/consul.json:ro
+    networks:
+      - backend
+    restart: unless-stopped
+
+  consul-2:
+    image: consul:1.16
+    container_name: utxo-consul-2
+    command: consul agent -server -ui -node=consul-2 -bootstrap-expect=3 -retry-join=consul-1
+    volumes:
+      - consul_2_data:/consul/data
+    depends_on:
+      - consul-1
+    networks:
+      - backend
+    restart: unless-stopped
+
+  consul-3:
+    image: consul:1.16
+    container_name: utxo-consul-3
+    command: consul agent -server -ui -node=consul-3 -bootstrap-expect=3 -retry-join=consul-1
+    volumes:
+      - consul_3_data:/consul/data
+    depends_on:
+      - consul-1
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: utxo-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - backend
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: utxo-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - backend
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.49
+    container_name: utxo-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "14250:14250" # gRPC
+    volumes:
+      - jaeger_data:/tmp
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # Elasticsearch & Kibana
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
+    container_name: utxo-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - backend
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.9.0
+    container_name: utxo-kibana
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_primary_data:
+  postgres_replica_1_data:
+  postgres_replica_2_data:
+  redis_1_data:
+  redis_2_data:
+  redis_3_data:
+  kafka_1_data:
+  kafka_2_data:
+  kafka_3_data:
+  zookeeper_data:
+  zookeeper_logs:
+  consul_1_data:
+  consul_2_data:
+  consul_3_data:
+  prometheus_data:
+  grafana_data:
+  jaeger_data:
+  elasticsearch_data:
+
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

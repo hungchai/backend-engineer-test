@@ -1,0 +1,28 @@
+{
+  "server": {
+    "port": 3000
+  },
+  "database": {
+    "database": "utxo_indexer_test",
+    "poolSize": 2,
+    "maxConnections": 5
+  },
+  "redis": {
+    "url": "redis://localhost:6379"
+  },
+  "cache": {
+    "enabled": false,
+    "ttlSeconds": 60,
+    "maxMemoryMB": 50
+    // Redis is used for cache
+  },
+  "indexer": {
+    "maxRollbackDepth": 100,
+    "batchSize": 10,
+    "enableMetrics": false
+  },
+  "logging": {
+    "level": "warn",
+    "prettyPrint": false
+  }
+}

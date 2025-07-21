@@ -1,0 +1,36 @@
+{
+  "recommendations": [
+    // TypeScript and JavaScript development
+    "ms-vscode.vscode-typescript-next",
+    "ms-vscode.vscode-json",
+    "bradlc.vscode-tailwindcss",
+    // Database development
+    "ms-mssql.mssql",
+    "cweijan.vscode-postgresql-client2",
+    // API testing and development
+    "humao.rest-client",
+    "rangav.vscode-thunder-client",
+    // Docker support
+    "ms-azuretools.vscode-docker",
+    // Git and version control
+    "donjayamanne.githistory",
+    "eamodio.gitlens",
+    // Testing
+    "hbenl.vscode-test-explorer",
+    "ms-vscode.test-adapter-converter",
+    // Code quality and formatting
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-eslint",
+    // Productivity
+    "ms-vscode.vscode-todo-highlight",
+    "alefragnani.bookmarks",
+    "gruntfuggly.todo-tree",
+    // Documentation
+    "yzhang.markdown-all-in-one",
+    "shd101wyy.markdown-preview-enhanced"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-node-azure-pack",
+    "ms-vscode.azure-account"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "cache": {
+    "enabled": true,
+    "ttlSeconds": 600,
+    "maxMemoryMB": 512
+    // Redis is used for cache
+  },
+  "redis": {
+    "url": "redis://redis:6379"
+  },
+  "logging": {
+    "prettyPrint": false
+  }
+}

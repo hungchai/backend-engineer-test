@@ -1,0 +1,35 @@
+{
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "utxo_indexer",
+    "username": "postgres",
+    "password": "password",
+    "poolSize": 10,
+    "maxConnections": 20,
+    "idleTimeoutMs": 30000,
+    "connectionTimeoutMs": 5000
+  },
+  "redis": {
+    "url": "redis://localhost:6379"
+  },
+  "cache": {
+    "enabled": false,
+    "ttlSeconds": 300,
+    "maxMemoryMB": 100,
+    // Redis is used for cache
+  },
+  "indexer": {
+    "maxRollbackDepth": 2000,
+    "batchSize": 1000,
+    "enableMetrics": true
+  },
+  "logging": {
+    "level": "info",
+    "prettyPrint": true
+  }
+}

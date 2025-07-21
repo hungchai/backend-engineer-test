@@ -1,0 +1,79 @@
+{
+    // TypeScript and JavaScript settings
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "typescript.preferences.includePackageJsonAutoImports": "auto",
+    "typescript.suggest.autoImports": true,
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    // Editor settings for this project
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit",
+        "source.fixAll": "explicit"
+    },
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.rulers": [
+        100
+    ],
+    "editor.wordWrap": "bounded",
+    "editor.wordWrapColumn": 100,
+    // File associations
+    "files.associations": {
+        "*.ts": "typescript",
+        "*.js": "javascript",
+        "*.json": "jsonc"
+    },
+    // Search and file exclusions
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/*.log": true,
+        "**/bun.lockb": true
+    },
+    "files.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/.git": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true
+    },
+    // Testing settings
+    "jest.rootPath": "spec",
+    "jest.testMatch": [
+        "**/*.spec.ts",
+        "**/*.test.ts"
+    ],
+    // Terminal settings
+    "terminal.integrated.defaultProfile.osx": "zsh",
+    "terminal.integrated.env.osx": {
+        "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/utxo_indexer"
+    },
+    // Language specific settings
+    "[typescript]": {
+        "editor.defaultFormatter": "vscode.typescript-language-features",
+        "editor.formatOnSave": true
+    },
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[sql]": {
+        "editor.defaultFormatter": "ms-mssql.mssql"
+    },
+    // Extensions recommendations
+    "extensions.recommendations": [
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-json",
+        "ms-mssql.mssql",
+        "humao.rest-client"
+    ],
+    // Git settings
+    "git.ignoreLimitWarning": true,
+    "git.autofetch": true,
+    // Debugging settings
+    "debug.console.acceptSuggestionOnEnter": "off",
+    "debug.console.fontSize": 14,
+    // Workspace specific settings
+    "typescript.preferences.includePackageJsonAutoImports": "auto",
+    "npm.packageManager": "bun"
+}

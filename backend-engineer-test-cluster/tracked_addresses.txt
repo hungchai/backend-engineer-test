@@ -1,0 +1,29 @@
+# UTXO Test Addresses for Tracking
+# Generated: Sat Jul 19 12:18:36 HKT 2025
+
+# Real Bitcoin Addresses (for reference)
+1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa  # Satoshi's Genesis Address
+1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2  # Historical High-Value Wallet
+3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy  # Multi-signature Address
+1JfbZRwdDHKZmuiZgYArJZhcuuzuw2HuMu  # Exchange Hot Wallet
+bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4  # Bech32 SegWit Address
+
+# High-Value Real Bitcoin Addresses
+bc1ql49ydapnjafl5t2cp9zqpjwe6pdgmxy98859v2  # Largest BTC Address
+1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s  # Binance Hot Wallet
+3M219KJtMVHkjGJWeFTiGNtARKZt9TwqF5  # BitGo Cold Storage
+12tkqA9xSoowkzoERHMWNKsTey55YEBqkv  # Grayscale Bitcoin Trust
+
+# Exchange Addresses
+1Kr6QSydW9bFQG1mXiPNNu6WpJGmUa9i1g  # Bitfinex Cold Storage
+36PrZ1KHYMpqSyAQXSG8VwbUiq2EogxLo2  # Bittrex Cold Storage
+3Kzh9qAqVWQhEsfQz7zEQL1EuSx5tyNLNS  # Poloniex Cold Storage
+
+# Mining Pool Addresses
+1CK6KHY6MHgYvmRQ4PAafKYDrg1ejbH1cE  # SlushPool
+1AcAj9p6zJn4xLXdvmdiuPCtY7YkBPTAJo  # F2Pool Main
+
+# Test Commands:
+# curl http://localhost:80/balance/1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+# curl http://localhost:80/health
+# curl http://localhost:80/metrics

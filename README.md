@@ -1,148 +1,96 @@
-# EMURGO Backend Engineer Challenge
+# UTXO Blockchain Indexer
 
-This challenge is designed to evaluate your skills with data processing and API development. You will be responsible for creating an indexer that will keep track of the balance of each address in a blockchain.
+## Overview
+A high-performance, stateless blockchain indexer for tracking UTXO (Unspent Transaction Output) balances. Designed for reliability, low latency, and easy examination.
 
-Please read all instructions bellow carefully.
+## Quick Start
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd backend-engineer-test
+   ```
+2. **Start services (Docker recommended):**
+   ```bash
+   docker-compose up -d --build
+   ```
+3. **Check API health:**
+   ```bash
+   curl http://localhost:3000/health
+   ```
 
-## Instructions
-Fork this repository and make the necessary changes to complete the challenge. Once you are done, simply send your repository link to us and we will review it.
+## Configuration
+- All configuration files are in the `config/` directory.
+- Main settings:
+  - `application.json` (base)
+  - `application-development.json`, `application-production.json`, `application-test.json` (overrides)
+- Key blocks:
+  - `database`: PostgreSQL connection
+  - `redis`: Redis connection (used for cache and distributed locks)
+  - `cache`: Cache settings (TTL, memory)
 
-## Setup
-This coding challenge uses [Bun](https://bun.sh/) as its runtime. If you are unfamiliar with it, you can follow the instructions on the official website to install it - it works pretty much the same as NodeJS, but has a ton of features that make our life easier, like a built-in test engine and TypeScript compiler.
+## Code Tour
+- **src/indexer.ts**: Main UTXOIndexer class. Handles block processing, validation, balance queries, and rollback. Injects a Database and uses Redis for distributed locking.
+- **src/database.ts**: Database abstraction. Manages all PostgreSQL operations, UTXO state, and soft deletes (via `voided` column). Uses Redis for address-level distributed locks.
+- **src/redis.ts**: Redis helpers. Provides distributed lock (`withAddressLock`), cache helpers (`setCache`, `getCache`, `delCache`), and a Redis client factory.
+- **spec/**: Test suite. Includes tests for all endpoints, validation, rollback, and distributed lock logic. Uses isolated Redis clients for lock tests.
+- **config/**: All environment and service configuration.
+- **docker-compose.yaml**: Local development and test orchestration for DB, Redis, and API.
 
-Strictly speaking, because we run this project on Docker, you don't even need to have Bun installed on your machine. You can run the project using the `docker-compose` command, as described below.
+## API Endpoints
+| Method | Endpoint                | Description                  |
+|--------|-------------------------|------------------------------|
+| POST   | `/blocks`               | Process a new block          |
+| GET    | `/balance/:address`     | Get address balance          |
+| POST   | `/rollback?height=N`    | Rollback to specific height  |
+| GET    | `/health`               | System health check          |
+| GET    | `/metrics`              | Performance metrics          |
 
-The setup for this coding challenge is quite simple. You need to have `docker` and `docker-compose` installed on your machine. If you don't have them installed, you can follow the instructions on the official docker website to install them.
+## Test Cases
+| Test Category         | Description                                                      |
+|----------------------|------------------------------------------------------------------|
+| Block Processing     | Validates and processes blocks, including all schema/business rules|
+| Balance Queries      | Ensures correct balance calculation for any address               |
+| Rollback            | Verifies rollback to a specific height and state restoration      |
+| Validation          | Tests for invalid heights, hashes, and unbalanced transactions    |
+| Distributed Lock    | Confirms Redis-based address-level locking and race prevention    |
+| API Connectivity    | Ensures API and DB are reachable and healthy                      |
+| Test Isolation      | Distributed lock tests use a dedicated Redis client               |
 
-https://docs.docker.com/engine/install/
-https://docs.docker.com/compose/install/
+## [Production Architecture](./backend-engineer-test-cluster/README.md)
+See the [Production Architecture Guide](./backend-engineer-test-cluster/README.md) for a detailed description of the production-ready cluster, infrastructure, and scaling.
 
-Once you have `docker` and `docker-compose` installed, you can run the following command to start the application:
+## Testing
+1. **Start dependencies (if not running):**
+   ```bash
+   docker-compose up -d db redis
+   ```
+2. **Run all tests:**
+   ```bash
+   bun test
+   ```
+3. **Run tests in watch mode:**
+   ```bash
+   bun test:watch
+   ```
 
-```bash
-docker-compose up -d --build
-```
+## Mapping to Challenge Requirements (from Question_Readme.md)
+- **POST /blocks**: Fully implemented with all required validations (height, input/output sum, block hash).
+- **GET /balance/:address**: Returns current balance for any address.
+- **POST /rollback?height=N**: Rolls back state to the given height, recalculates balances.
+- **Tests**: All operations above are covered, including error and edge cases. Distributed lock and cache logic are also tested.
+- **Error Handling**: All endpoints return appropriate status codes and messages for invalid input or state.
 
-or using `Bun`
+## Design Decisions
+### Redis-based Caching & Locking
+- Redis is used for distributed caching and address-level distributed locks.
+- Cache helpers in `src/redis.ts`: `setCache`, `getCache`, `delCache`.
+- Lock helpers: `withAddressLock` ensures safe concurrent balance updates.
 
-```bash
-bun run-docker
-```
+### Soft Deletes
+- Instead of deleting records, a `voided` column marks rollbacked data for auditability and safety.
 
-## The Challenge
-Your job is to create an indexer that will keep track of the current balance for each address. To do that, you will need to implement the following endpoints:
+### Test Isolation
+- Distributed lock tests use a separate Redis client to avoid teardown conflicts and ensure robust, isolated test runs.
 
-### `POST /blocks`
-This endpoint will receive a JSON object that should match the `Block` type from the following schema:
-
-```ts
-Output = {
-  address: string;
-  value: number;
-}
-
-Input = {
-  txId: string;
-  index: number;
-}
-
-Transaction = {
-  id: string;
-  inputs: Array<Input>
-  outputs: Array<Output>
-}
-
-Block = {
-  id: string;
-  height: number;
-  transactions: Array<Transaction>;
-}
-```
-
-Based on the received message you should update the balance of each address accordingly. This endpoint should also run the following validations:
-- validate if the `height` is exactly one unit higher than the current height - this also means that the first ever block should have `height = 1`. If it is not, you should return a `400` status code with an appropriate message;
-- validate if the sum of the values of the inputs is exactly equal to the sum of the values of the outputs. If it is not, you should return a `400` status code with an appropriate message;
-- validate if the `id` of the Block correct. For that, the `id` of the block must be the sha256 hash of the sum of its transaction's ids together with its own height. In other words: `sha256(height + transaction1.id + transaction2.id + ... + transactionN.id)`. If it is not, you should return a `400` status code with an appropriate message;
-
-#### Understanding the Schema
-If you are familiar with the UTXO model, you will recognize the schema above. If you are not, here is a brief explanation:
-- each transaction is composed of inputs and outputs;
-- each input is a reference to an output of a previous transaction;
-- each output means a given address **received** a certain amount of value;
-- from the above, it follows that each input **spends** a certain amount of value from its original address;
-- in summary, the balance of an address is the sum of all the values it received minus the sum of all the values it spent;
-
-### `GET /balance/:address`
-This endpoint should return the current balance of the given address. Simple as that.
-
-### `POST /rollback?height=number`
-This endpoint should rollback the state of the indexer to the given height. This means that you should undo all the transactions that were added after the given height and recalculate the balance of each address. You can assume the `height` will **never** be more than 2000 blocks from the current height.
-
-## Example
-Imagine the following sequence of messages:
-```json
-{
-  height: 1,
-  transactions: [{
-    id: "tx1",
-    inputs: [],
-    outputs: [{
-      address: "addr1",
-      value: 10
-    }]
-  }]
-}
-// here we have addr1 with a balance of 10
-
-{
-  height: 2,
-  transactions: [{
-    id: "tx2",
-    inputs: [{
-      txId: "tx1",
-      index: 0
-    }],
-    outputs: [{
-      address: "addr2",
-      value: 4
-    }, {
-      address: "addr3",
-      value: 6
-    }]
-  }]
-}
-// here we have addr1 with a balance of 0, addr2 with a balance of 4 and addr3 with a balance of 6
-
-{
-  height: 3,
-  transactions: [{
-    id: "tx3",
-    inputs: [{
-      txId: "tx2",
-      index: 1
-    }],
-    outputs: [{
-      address: "addr4",
-      value: 2
-    }, {
-      address: "addr5",
-      value: 2
-    }, {
-      address: "addr6",
-      value: 2
-    }]
-  }]
-}
-// here we have addr1 with a balance of 0, addr2 with a balance of 4, addr3 with a balance of 0 and addr4, addr5 and addr6 with a balance of 2
-```
-
-Then, if you receive the request `POST /rollback?height=2`, you should undo the last transaction which will lead to the state where we have addr1 with a balance of 0, addr2 with a balance of 4 and addr3 with a balance of 6.
-
-## Tests
-You should write tests for all the operations described above. Anything you put on the `spec` folder in the format `*.spec.ts` will be run by the test engine.
-
-Here we are evaluating your capacity to understand what should be tested and how. Are you going to create abstractions and mock dependencies? Are you going to test the database layer? Are you going to test the API layer? That's all up to you.
-
-## Further Instructions
-- We expect you to handle errors and edge cases. Understanding what these are and how to handle them is part of the challenge;
-- We provided you with a setup to run the API and a Postgres database together using Docker, as well as some sample code to test the database connection. You can change this setup to use any other database you'd like;
+## Contact
+For questions or support, please contact the project maintainer. 
