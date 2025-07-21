@@ -28,11 +28,13 @@ A high-performance, stateless blockchain indexer for tracking UTXO (Unspent Tran
   - `redis`: Redis connection (used for cache and distributed locks)
   - `cache`: Cache settings (TTL, memory)
 
-## Code Structure & Explanations
+## Code Tour
 - **src/indexer.ts**: Main UTXOIndexer class. Handles block processing, validation, balance queries, and rollback. Injects a Database and uses Redis for distributed locking.
 - **src/database.ts**: Database abstraction. Manages all PostgreSQL operations, UTXO state, and soft deletes (via `voided` column). Uses Redis for address-level distributed locks.
 - **src/redis.ts**: Redis helpers. Provides distributed lock (`withAddressLock`), cache helpers (`setCache`, `getCache`, `delCache`), and a Redis client factory.
 - **spec/**: Test suite. Includes tests for all endpoints, validation, rollback, and distributed lock logic. Uses isolated Redis clients for lock tests.
+- **config/**: All environment and service configuration.
+- **docker-compose.yaml**: Local development and test orchestration for DB, Redis, and API.
 
 ## API Endpoints
 | Method | Endpoint                | Description                  |
@@ -42,6 +44,20 @@ A high-performance, stateless blockchain indexer for tracking UTXO (Unspent Tran
 | POST   | `/rollback?height=N`    | Rollback to specific height  |
 | GET    | `/health`               | System health check          |
 | GET    | `/metrics`              | Performance metrics          |
+
+## Test Cases
+| Test Category         | Description                                                      |
+|----------------------|------------------------------------------------------------------|
+| Block Processing     | Validates and processes blocks, including all schema/business rules|
+| Balance Queries      | Ensures correct balance calculation for any address               |
+| Rollback            | Verifies rollback to a specific height and state restoration      |
+| Validation          | Tests for invalid heights, hashes, and unbalanced transactions    |
+| Distributed Lock    | Confirms Redis-based address-level locking and race prevention    |
+| API Connectivity    | Ensures API and DB are reachable and healthy                      |
+| Test Isolation      | Distributed lock tests use a dedicated Redis client               |
+
+## [Production Architecture](./backend-engineer-test-cluster/README.md)
+See the [Production Architecture Guide](./backend-engineer-test-cluster/README.md) for a detailed description of the production-ready cluster, infrastructure, and scaling.
 
 ## Testing
 1. **Start dependencies (if not running):**
@@ -56,14 +72,6 @@ A high-performance, stateless blockchain indexer for tracking UTXO (Unspent Tran
    ```bash
    bun test:watch
    ```
-
-### Test Coverage
-- **Block Processing:** Validates and processes blocks, including all schema and business rules.
-- **Balance Queries:** Ensures correct balance calculation for any address.
-- **Rollback:** Verifies rollback to a specific height and state restoration.
-- **Validation:** Tests for invalid heights, hashes, and unbalanced transactions.
-- **Distributed Lock:** Confirms Redis-based address-level locking works and prevents race conditions.
-- **Test Isolation:** Distributed lock tests use a dedicated Redis client for clean teardown.
 
 ## Mapping to Challenge Requirements (from Question_Readme.md)
 - **POST /blocks**: Fully implemented with all required validations (height, input/output sum, block hash).

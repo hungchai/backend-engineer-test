@@ -1,4 +1,82 @@
-# UTXO Blockchain Indexer - Cluster Deployment Guide
+# Backend Engineer Test Cluster
+
+**Cluster documentation:** This file describes the infrastructure, orchestration, and architecture for running the UTXO Blockchain Indexer in a multi-service environment. For a full project overview, API documentation, and test cases, see the main [README in the project root](../README.md).
+
+
+## Architecture Diagram
+
+A clear view of the production-ready cluster architecture:
+
+```mermaid
+graph TB
+    subgraph "External Layer"
+        Internet[Internet Traffic]
+    end
+    
+    subgraph "Load Balancer Layer"
+        LB[HAProxy Load Balancer]
+    end
+    
+    subgraph "API Layer"
+        API1[UTXO API Instance 1]
+        API2[UTXO API Instance 2]
+        API3[UTXO API Instance 3]
+    end
+    
+    subgraph "Database Layer"
+        PG_PRIMARY[PostgreSQL Primary]
+        PG_REPLICA1[PostgreSQL Replica 1]
+        PG_REPLICA2[PostgreSQL Replica 2]
+    end
+    
+    subgraph "Cache & Lock Layer"
+        REDIS_CLUSTER[Redis Cluster]
+    end
+    
+    subgraph "Service Discovery"
+        CONSUL[Consul Service Registry]
+    end
+    
+    subgraph "Monitoring Stack"
+        PROMETHEUS[Prometheus Metrics]
+        GRAFANA[Grafana Dashboards]
+        JAEGER[Jaeger Tracing]
+    end
+
+    Internet --> LB
+    LB --> API1
+    LB --> API2
+    LB --> API3
+    
+    API1 --> PG_PRIMARY
+    API2 --> PG_PRIMARY
+    API3 --> PG_PRIMARY
+    
+    PG_PRIMARY -.-> PG_REPLICA1
+    PG_PRIMARY -.-> PG_REPLICA2
+    
+    API1 --> REDIS_CLUSTER
+    API2 --> REDIS_CLUSTER
+    API3 --> REDIS_CLUSTER
+    
+    CONSUL -.-> API1
+    CONSUL -.-> API2
+    CONSUL -.-> API3
+    CONSUL -.-> PG_PRIMARY
+    CONSUL -.-> REDIS_CLUSTER
+    
+    PROMETHEUS -.-> API1
+    PROMETHEUS -.-> API2
+    PROMETHEUS -.-> API3
+    PROMETHEUS -.-> PG_PRIMARY
+    PROMETHEUS -.-> REDIS_CLUSTER
+    
+    GRAFANA --> PROMETHEUS
+    
+    API1 -.-> JAEGER
+    API2 -.-> JAEGER
+    API3 -.-> JAEGER
+```
 
 ## 🚀 Quick Start
 

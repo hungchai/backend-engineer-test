@@ -382,7 +382,7 @@ services:
       - backend
     restart: unless-stopped
 
-  # ELK Stack
+  # Elasticsearch & Kibana
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
     container_name: utxo-elasticsearch
@@ -394,18 +394,6 @@ services:
       - "9200:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
-    networks:
-      - backend
-    restart: unless-stopped
-
-  logstash:
-    image: docker.elastic.co/logstash/logstash:8.9.0
-    container_name: utxo-logstash
-    volumes:
-      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
-      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
-    depends_on:
-      - elasticsearch
     networks:
       - backend
     restart: unless-stopped
