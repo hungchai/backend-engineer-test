@@ -1,4 +1,6 @@
+import type Redis from 'ioredis';
 import { Pool, type PoolClient } from 'pg';
+import { withAddressLock } from './redis.js';
 import type {
   Block,
   DBBlock,
@@ -9,14 +11,16 @@ import type {
 
 export class Database {
   private pool: Pool;
+  private redis: Redis;
 
-  constructor(config: DatabaseConfig) {
+  constructor(config: DatabaseConfig, redis: Redis) {
     this.pool = new Pool({
       connectionString: config.connectionString,
       max: config.maxConnections,
       idleTimeoutMillis: config.idleTimeoutMs,
       connectionTimeoutMillis: config.connectionTimeoutMs
     });
+    this.redis = redis;
   }
 
   async initialize(): Promise<void> {
@@ -34,7 +38,8 @@ export class Database {
         CREATE TABLE IF NOT EXISTS blocks (
           id TEXT PRIMARY KEY,
           height BIGINT UNIQUE NOT NULL,
-          created_at TIMESTAMP DEFAULT NOW()
+          created_at TIMESTAMP DEFAULT NOW(),
+          voided BIGINT
         )
       `);
 
@@ -43,7 +48,8 @@ export class Database {
         CREATE TABLE IF NOT EXISTS transactions (
           id TEXT PRIMARY KEY,
           block_id TEXT NOT NULL REFERENCES blocks(id) ON DELETE CASCADE,
-          block_height BIGINT NOT NULL
+          block_height BIGINT NOT NULL,
+          voided BIGINT
         )
       `);
 
@@ -57,6 +63,7 @@ export class Database {
           spent BOOLEAN DEFAULT FALSE,
           spent_in_tx TEXT,
           block_height BIGINT NOT NULL,
+          voided BIGINT,
           PRIMARY KEY (tx_id, output_index)
         )
       `);
@@ -102,14 +109,14 @@ export class Database {
 
   async getCurrentHeight(): Promise<number> {
     const result = await this.pool.query(
-      'SELECT COALESCE(MAX(height), 0) as height FROM blocks'
+      'SELECT COALESCE(MAX(height), 0) as height FROM blocks WHERE voided IS NULL'
     );
     return Number(result.rows[0].height);
   }
 
   async getBlock(height: number): Promise<DBBlock | null> {
     const result = await this.pool.query(
-      'SELECT * FROM blocks WHERE height = $1',
+      'SELECT * FROM blocks WHERE height = $1 AND voided IS NULL',
       [height]
     );
     return result.rows[0] || null;
@@ -117,7 +124,7 @@ export class Database {
 
   async getUTXO(txId: string, index: number): Promise<DBUTXO | null> {
     const result = await this.pool.query(
-      'SELECT * FROM utxos WHERE tx_id = $1 AND output_index = $2',
+      'SELECT * FROM utxos WHERE tx_id = $1 AND output_index = $2 AND voided IS NULL',
       [txId, index]
     );
     return result.rows[0] || null;
@@ -130,7 +137,7 @@ export class Database {
     const values = inputs.flatMap(input => [input.txId, input.index]);
 
     const result = await this.pool.query(
-      `SELECT * FROM utxos WHERE (tx_id, output_index) IN (VALUES ${conditions})`,
+      `SELECT * FROM utxos WHERE (tx_id, output_index) IN (VALUES ${conditions}) AND voided IS NULL`,
       values
     );
 
@@ -213,7 +220,7 @@ export class Database {
     spentInTx: string
   ): Promise<void> {
     await client.query(
-      'UPDATE utxos SET spent = TRUE, spent_in_tx = $1 WHERE tx_id = $2 AND output_index = $3',
+      'UPDATE utxos SET spent = TRUE, spent_in_tx = $1 WHERE tx_id = $2 AND output_index = $3 AND voided IS NULL',
       [spentInTx, txId, index]
     );
   }
@@ -234,12 +241,13 @@ export class Database {
   private async updateAddressBalances(client: PoolClient, block: Block): Promise<void> {
     // Calculate balance changes for all affected addresses
     const balanceChanges = new Map<string, bigint>();
+    const affectedAddresses = new Set<string>();
 
     for (const tx of block.transactions) {
       // Process inputs (decrease balances)
       for (const input of tx.inputs) {
         const utxo = await client.query(
-          'SELECT address, value FROM utxos WHERE tx_id = $1 AND output_index = $2',
+          'SELECT address, value FROM utxos WHERE tx_id = $1 AND output_index = $2 AND voided IS NULL',
           [input.txId, input.index]
         );
 
@@ -247,6 +255,7 @@ export class Database {
           const address = utxo.rows[0].address;
           const value = BigInt(utxo.rows[0].value);
           balanceChanges.set(address, (balanceChanges.get(address) || 0n) - value);
+          affectedAddresses.add(address);
         }
       }
 
@@ -254,12 +263,18 @@ export class Database {
       for (const output of tx.outputs) {
         const value = BigInt(output.value);
         balanceChanges.set(output.address, (balanceChanges.get(output.address) || 0n) + value);
+        affectedAddresses.add(output.address);
       }
     }
 
-    // Apply all balance changes
-    for (const [address, deltaValue] of balanceChanges) {
-      await this.updateAddressBalance(client, address, deltaValue, block.height);
+    // Apply all balance changes with distributed lock
+    for (const address of affectedAddresses) {
+      const deltaValue = balanceChanges.get(address) || 0n;
+      if (deltaValue !== 0n) {
+        await withAddressLock(this.redis, address, async () => {
+          await this.updateAddressBalance(client, address, deltaValue, block.height);
+        });
+      }
     }
   }
 
@@ -284,69 +299,36 @@ export class Database {
     try {
       await client.query('BEGIN');
 
-      // Get affected addresses before rollback
-      const affectedAddresses = await client.query(
-        'SELECT DISTINCT address FROM utxos WHERE block_height > $1',
-        [targetHeight]
-      );
+      const currentHeight = await this.getCurrentHeight();
 
-      // Mark UTXOs as unspent if they were spent in blocks to be removed
-      await client.query(`
-        UPDATE utxos SET spent = FALSE, spent_in_tx = NULL
-        WHERE spent_in_tx IN (
-          SELECT id FROM transactions WHERE block_height > $1
-        )
-      `, [targetHeight]);
-
-      // Delete UTXOs created in blocks to be removed
-      await client.query(
-        'DELETE FROM utxos WHERE block_height > $1',
-        [targetHeight]
-      );
-
-      // Count transactions to be removed
-      const txResult = await client.query(
-        'SELECT COUNT(*) as count FROM transactions WHERE block_height > $1',
-        [targetHeight]
-      );
-      const transactionsRemoved = parseInt(txResult.rows[0].count);
-
-      // Delete transactions
-      await client.query(
-        'DELETE FROM transactions WHERE block_height > $1',
-        [targetHeight]
-      );
-
-      // Count blocks to be removed
+      // Mark blocks as voided
       const blockResult = await client.query(
-        'SELECT COUNT(*) as count FROM blocks WHERE height > $1',
-        [targetHeight]
+        'UPDATE blocks SET voided = $1 WHERE height > $2 AND voided IS NULL RETURNING id',
+        [currentHeight, targetHeight]
       );
-      const blocksRemoved = parseInt(blockResult.rows[0].count);
+      const blocksRemoved = blockResult.rowCount ?? 0;
 
-      // Delete blocks
+      // Mark transactions as voided
+      const txResult = await client.query(
+        'UPDATE transactions SET voided = $1 WHERE block_height > $2 AND voided IS NULL RETURNING id',
+        [currentHeight, targetHeight]
+      );
+      const transactionsRemoved = txResult.rowCount ?? 0;
+
+      // Mark UTXOs as voided
       await client.query(
-        'DELETE FROM blocks WHERE height > $1',
-        [targetHeight]
+        'UPDATE utxos SET voided = $1 WHERE block_height > $2 AND voided IS NULL',
+        [currentHeight, targetHeight]
       );
 
-      // Recalculate balances for affected addresses
-      for (const row of affectedAddresses.rows) {
-        const address = row.address;
-        const balanceResult = await client.query(`
-          SELECT COALESCE(SUM(
-            CASE WHEN spent THEN 0 ELSE value END
-          ), 0) as balance
-          FROM utxos WHERE address = $1
-        `, [address]);
+      // Re-calculate balances for all addresses affected by the rollback
+      const affectedAddressesResult = await client.query(
+        `SELECT DISTINCT address FROM utxos WHERE block_height > $1 AND voided = $2`,
+        [targetHeight, currentHeight]
+      );
 
-        const newBalance = balanceResult.rows[0].balance;
-
-        await client.query(`
-          UPDATE address_balances 
-          SET balance = $1, last_updated_height = $2
-          WHERE address = $3
-        `, [newBalance, targetHeight, address]);
+      for (const row of affectedAddressesResult.rows) {
+        await this.recalculateAddressBalance(client, row.address, targetHeight);
       }
 
       await client.query('COMMIT');
@@ -359,15 +341,31 @@ export class Database {
     }
   }
 
+  private async recalculateAddressBalance(client: PoolClient, address: string, rollbackHeight: number): Promise<void> {
+    const balanceResult = await client.query(
+      `SELECT COALESCE(SUM(value), 0) as balance FROM utxos 
+       WHERE address = $1 AND spent = FALSE AND voided IS NULL`,
+      [address]
+    );
+    const newBalance = BigInt(balanceResult.rows[0].balance);
+
+    await client.query(
+      'UPDATE address_balances SET balance = $1, last_updated_height = $2 WHERE address = $3',
+      [newBalance, rollbackHeight, address]
+    );
+  }
+
   async close(): Promise<void> {
     await this.pool.end();
+    this.redis.disconnect();
   }
 
   // Health check
   async ping(): Promise<boolean> {
     try {
       const result = await this.pool.query('SELECT 1');
-      return result.rows.length === 1;
+      const redisPing = await this.redis.ping();
+      return result.rows.length === 1 && redisPing === 'PONG';
     } catch {
       return false;
     }

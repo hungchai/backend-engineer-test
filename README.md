@@ -1,476 +1,88 @@
 # UTXO Blockchain Indexer
 
-A high-performance blockchain indexer that tracks UTXO (Unspent Transaction Output) balances for Bitcoin addresses. Built for the EMURGO Backend Engineer Challenge with enterprise-grade features.
+## Overview
+A high-performance, stateless blockchain indexer for tracking UTXO (Unspent Transaction Output) balances. Designed for reliability, low latency, and easy examination.
 
-## 📋 Prerequisites
+## Quick Start
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd backend-engineer-test
+   ```
+2. **Start services (Docker recommended):**
+   ```bash
+   docker-compose up -d --build
+   ```
+3. **Check API health:**
+   ```bash
+   curl http://localhost:3000/health
+   ```
 
-### Required Software
-- **Docker** (v20.10+) - [Install Guide](https://docs.docker.com/engine/install/)
-- **Docker Compose** (v2.0+) - [Install Guide](https://docs.docker.com/compose/install/)
-- **Bun** (v1.0+) - [Install Guide](https://bun.sh/) (optional, for local development)
+## Configuration
+- All configuration files are in the `config/` directory.
+- Main settings:
+  - `application.json` (base)
+  - `application-development.json`, `application-production.json`, `application-test.json` (overrides)
+- Key blocks:
+  - `database`: PostgreSQL connection
+  - `redis`: Redis connection (used for cache and distributed locks)
+  - `cache`: Cache settings (TTL, memory)
 
-### System Requirements
-- **RAM**: 4GB minimum, 8GB recommended
-- **Storage**: 10GB free space
-- **CPU**: 2 cores minimum, 4 cores recommended
-- **Network**: Internet connection for Docker images
+## Code Structure & Explanations
+- **src/indexer.ts**: Main UTXOIndexer class. Handles block processing, validation, balance queries, and rollback. Injects a Database and uses Redis for distributed locking.
+- **src/database.ts**: Database abstraction. Manages all PostgreSQL operations, UTXO state, and soft deletes (via `voided` column). Uses Redis for address-level distributed locks.
+- **src/redis.ts**: Redis helpers. Provides distributed lock (`withAddressLock`), cache helpers (`setCache`, `getCache`, `delCache`), and a Redis client factory.
+- **spec/**: Test suite. Includes tests for all endpoints, validation, rollback, and distributed lock logic. Uses isolated Redis clients for lock tests.
 
-## ⚡ Quick Start
+## API Endpoints
+| Method | Endpoint                | Description                  |
+|--------|-------------------------|------------------------------|
+| POST   | `/blocks`               | Process a new block          |
+| GET    | `/balance/:address`     | Get address balance          |
+| POST   | `/rollback?height=N`    | Rollback to specific height  |
+| GET    | `/health`               | System health check          |
+| GET    | `/metrics`              | Performance metrics          |
 
-### 1. Clone and Setup
-```bash
-git clone <repository-url>
-cd backend-engineer-test
-```
-
-### 2. Start with Docker (Recommended)
-```bash
-# Start the application with PostgreSQL
-docker-compose up -d --build
-
-# Or using the npm script
-bun run run-docker
-```
-
-### 3. Verify Installation
-```bash
-# Check if services are running
-docker-compose ps
-
-# Test the API
-curl http://localhost:3000/health
-```
-
-### 4. Run Tests
-```bash
-# Run all tests
-bun test
-
-# Run tests in watch mode
-bun test:watch
-```
-
-## 🗄️ Database Schema
-
-### Tables Creation
-
-```sql
--- Blocks table
-CREATE TABLE blocks (
-  id TEXT PRIMARY KEY,
-  height BIGINT UNIQUE NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Transactions table
-CREATE TABLE transactions (
-  id TEXT PRIMARY KEY,
-  block_id TEXT NOT NULL REFERENCES blocks(id) ON DELETE CASCADE,
-  block_height BIGINT NOT NULL
-);
-
--- UTXOs table
-CREATE TABLE utxos (
-  tx_id TEXT NOT NULL,
-  output_index INTEGER NOT NULL,
-  address TEXT NOT NULL,
-  value BIGINT NOT NULL,
-  spent BOOLEAN DEFAULT FALSE,
-  spent_in_tx TEXT,
-  block_height BIGINT NOT NULL,
-  PRIMARY KEY (tx_id, output_index)
-);
-
--- Address balances table
-CREATE TABLE address_balances (
-  address TEXT PRIMARY KEY,
-  balance BIGINT NOT NULL DEFAULT 0,
-  last_updated_height BIGINT NOT NULL DEFAULT 0
-);
-```
-
-### Indexes Creation
-
-```sql
--- Performance indexes for optimal query performance
-CREATE INDEX idx_utxos_address ON utxos(address);
-CREATE INDEX idx_utxos_spent ON utxos(spent);
-CREATE INDEX idx_utxos_block_height ON utxos(block_height);
-CREATE INDEX idx_blocks_height ON blocks(height);
-CREATE INDEX idx_transactions_block_height ON transactions(block_height);
-CREATE INDEX idx_utxos_spent_lookup ON utxos(tx_id, output_index, spent);
-CREATE INDEX idx_address_balances_height ON address_balances(last_updated_height);
-```
-
-## 🧪 Test Cases
-
-### Core Functionality Tests
-
-#### 1. Block Processing Tests
-```typescript
-// Test: Genesis block processing
-test('should process genesis block successfully', async () => {
-  const genesisBlock = {
-    id: 'valid-hash',
-    height: 1,
-    transactions: [{
-      id: 'tx1',
-      inputs: [],
-      outputs: [{ address: 'addr1', value: 100 }]
-    }]
-  };
-  
-  const result = await indexer.processBlock(genesisBlock);
-  expect(result.height).toBe(1);
-  expect(await indexer.getBalance('addr1')).toBe(100);
-});
-
-// Test: Transaction chain processing
-test('should process block with transaction chain', async () => {
-  // Block 1: Genesis
-  const block1 = createTestBlock(1, [{
-    id: 'tx1',
-    inputs: [],
-    outputs: [{ address: 'addr1', value: 100 }]
-  }]);
-  await indexer.processBlock(block1);
-
-  // Block 2: Transfer
-  const block2 = createTestBlock(2, [{
-    id: 'tx2',
-    inputs: [{ txId: 'tx1', index: 0 }],
-    outputs: [
-      { address: 'addr2', value: 60 },
-      { address: 'addr1', value: 40 } // Change
-    ]
-  }]);
-  
-  const result = await indexer.processBlock(block2);
-  expect(result.height).toBe(2);
-  expect(await indexer.getBalance('addr1')).toBe(40);
-  expect(await indexer.getBalance('addr2')).toBe(60);
-});
-```
-
-#### 2. Validation Tests
-```typescript
-// Test: Invalid block height
-test('should reject block with invalid height', async () => {
-  const invalidBlock = createTestBlock(3, [{
-    id: 'tx1',
-    inputs: [],
-    outputs: [{ address: 'addr1', value: 100 }]
-  }]);
-  await expect(indexer.processBlock(invalidBlock))
-    .rejects.toThrow('Invalid block height');
-});
-
-// Test: Invalid block hash
-test('should reject block with invalid hash', async () => {
-  const block = {
-    id: 'invalid-hash',
-    height: 1,
-    transactions: [{
-      id: 'tx1',
-      inputs: [],
-      outputs: [{ address: 'addr1', value: 100 }]
-    }]
-  };
-  await expect(indexer.processBlock(block))
-    .rejects.toThrow('Invalid block hash');
-});
-
-// Test: Unbalanced transactions
-test('should reject block with unbalanced transactions', async () => {
-  // Setup: Create initial UTXO
-  const block1 = createTestBlock(1, [{
-    id: 'tx1',
-    inputs: [],
-    outputs: [{ address: 'addr1', value: 100 }]
-  }]);
-  await indexer.processBlock(block1);
-
-  // Test: Try to spend more than available
-  const invalidBlock = createTestBlock(2, [{
-    id: 'tx2',
-    inputs: [{ txId: 'tx1', index: 0 }],
-    outputs: [{ address: 'addr2', value: 150 }] // More than input
-  }]);
-  await expect(indexer.processBlock(invalidBlock))
-    .rejects.toThrow('Transaction balance mismatch');
-});
-```
-
-#### 3. Balance Query Tests
-```typescript
-// Test: Get address balance
-test('should return correct address balance', async () => {
-  // Setup: Process block with outputs
-  const block = createTestBlock(1, [{
-    id: 'tx1',
-    inputs: [],
-    outputs: [
-      { address: 'addr1', value: 100 },
-      { address: 'addr2', value: 200 }
-    ]
-  }]);
-  await indexer.processBlock(block);
-
-  // Test: Query balances
-  expect(await indexer.getBalance('addr1')).toBe(100);
-  expect(await indexer.getBalance('addr2')).toBe(200);
-  expect(await indexer.getBalance('nonexistent')).toBe(0);
-});
-```
-
-#### 4. Rollback Tests
-```typescript
-// Test: Rollback functionality
-test('should rollback to specified height', async () => {
-  // Setup: Process multiple blocks
-  const block1 = createTestBlock(1, [{
-    id: 'tx1',
-    inputs: [],
-    outputs: [{ address: 'addr1', value: 100 }]
-  }]);
-  await indexer.processBlock(block1);
-
-  const block2 = createTestBlock(2, [{
-    id: 'tx2',
-    inputs: [{ txId: 'tx1', index: 0 }],
-    outputs: [{ address: 'addr2', value: 100 }]
-  }]);
-  await indexer.processBlock(block2);
-
-  // Verify state before rollback
-  expect(await indexer.getBalance('addr1')).toBe(0);
-  expect(await indexer.getBalance('addr2')).toBe(100);
-
-  // Test: Rollback to height 1
-  await indexer.rollbackToHeight(1);
-
-  // Verify state after rollback
-  expect(await indexer.getBalance('addr1')).toBe(100);
-  expect(await indexer.getBalance('addr2')).toBe(0);
-});
-```
-
-### API Endpoint Tests
-
-#### 1. POST /blocks
-```typescript
-test('POST /blocks - should process valid block', async () => {
-  const response = await fetch('http://localhost:3000/blocks', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      id: 'valid-hash',
-      height: 1,
-      transactions: [{
-        id: 'tx1',
-        inputs: [],
-        outputs: [{ address: 'addr1', value: 100 }]
-      }]
-    })
-  });
-
-  expect(response.status).toBe(200);
-  const result = await response.json();
-  expect(result.height).toBe(1);
-});
-```
-
-#### 2. GET /balance/:address
-```typescript
-test('GET /balance/:address - should return balance', async () => {
-  // Setup: Process block first
-  await fetch('http://localhost:3000/blocks', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      id: 'valid-hash',
-      height: 1,
-      transactions: [{
-        id: 'tx1',
-        inputs: [],
-        outputs: [{ address: 'addr1', value: 100 }]
-      }]
-    })
-  });
-
-  // Test: Query balance
-  const response = await fetch('http://localhost:3000/balance/addr1');
-  expect(response.status).toBe(200);
-  const balance = await response.json();
-  expect(balance.balance).toBe(100);
-});
-```
-
-#### 3. POST /rollback
-```typescript
-test('POST /rollback - should rollback to height', async () => {
-  // Setup: Process multiple blocks
-  await fetch('http://localhost:3000/blocks', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      id: 'valid-hash-1',
-      height: 1,
-      transactions: [{
-        id: 'tx1',
-        inputs: [],
-        outputs: [{ address: 'addr1', value: 100 }]
-      }]
-    })
-  });
-
-  await fetch('http://localhost:3000/blocks', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      id: 'valid-hash-2',
-      height: 2,
-      transactions: [{
-        id: 'tx2',
-        inputs: [{ txId: 'tx1', index: 0 }],
-        outputs: [{ address: 'addr2', value: 100 }]
-      }]
-    })
-  });
-
-  // Test: Rollback
-  const response = await fetch('http://localhost:3000/rollback?height=1', {
-    method: 'POST'
-  });
-  expect(response.status).toBe(200);
-});
-```
-
-## 🚀 Running Tests
-
-### All Tests
-```bash
-bun test
-```
-
-### Watch Mode
-```bash
-bun test:watch
-```
-
-### Specific Test File
-```bash
-bun test spec/indexer.spec.ts
-```
+## Testing
+1. **Start dependencies (if not running):**
+   ```bash
+   docker-compose up -d db redis
+   ```
+2. **Run all tests:**
+   ```bash
+   bun test
+   ```
+3. **Run tests in watch mode:**
+   ```bash
+   bun test:watch
+   ```
 
 ### Test Coverage
-```bash
-# Run with coverage (if available)
-bun test --coverage
-```
+- **Block Processing:** Validates and processes blocks, including all schema and business rules.
+- **Balance Queries:** Ensures correct balance calculation for any address.
+- **Rollback:** Verifies rollback to a specific height and state restoration.
+- **Validation:** Tests for invalid heights, hashes, and unbalanced transactions.
+- **Distributed Lock:** Confirms Redis-based address-level locking works and prevents race conditions.
+- **Test Isolation:** Distributed lock tests use a dedicated Redis client for clean teardown.
 
-## 📡 API Endpoints
+## Mapping to Challenge Requirements (from Question_Readme.md)
+- **POST /blocks**: Fully implemented with all required validations (height, input/output sum, block hash).
+- **GET /balance/:address**: Returns current balance for any address.
+- **POST /rollback?height=N**: Rolls back state to the given height, recalculates balances.
+- **Tests**: All operations above are covered, including error and edge cases. Distributed lock and cache logic are also tested.
+- **Error Handling**: All endpoints return appropriate status codes and messages for invalid input or state.
 
-| Endpoint | Method | Description | Example |
-|----------|--------|-------------|---------|
-| `POST /blocks` | POST | Process new blockchain blocks | [Example](#post-blocks) |
-| `GET /balance/:address` | GET | Get address balance | [Example](#get-balance) |
-| `POST /rollback?height=N` | POST | Rollback to specific height | [Example](#post-rollback) |
-| `GET /health` | GET | System health status | `curl http://localhost:3000/health` |
+## Design Decisions
+### Redis-based Caching & Locking
+- Redis is used for distributed caching and address-level distributed locks.
+- Cache helpers in `src/redis.ts`: `setCache`, `getCache`, `delCache`.
+- Lock helpers: `withAddressLock` ensures safe concurrent balance updates.
 
-### Example API Usage
+### Soft Deletes
+- Instead of deleting records, a `voided` column marks rollbacked data for auditability and safety.
 
-#### POST /blocks
-```bash
-curl -X POST http://localhost:3000/blocks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "valid-hash",
-    "height": 1,
-    "transactions": [{
-      "id": "tx1",
-      "inputs": [],
-      "outputs": [{"address": "addr1", "value": 100}]
-    }]
-  }'
-```
+### Test Isolation
+- Distributed lock tests use a separate Redis client to avoid teardown conflicts and ensure robust, isolated test runs.
 
-#### GET /balance/:address
-```bash
-curl http://localhost:3000/balance/addr1
-```
-
-#### POST /rollback
-```bash
-curl -X POST "http://localhost:3000/rollback?height=1"
-```
-
-## 🛠️ Development
-
-### Local Development
-```bash
-# Install dependencies
-bun install
-
-# Start development server
-bun dev
-
-# Run tests
-bun test
-```
-
-### Docker Development
-```bash
-# Start services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f api
-
-# Stop services
-docker-compose down
-```
-
-## 📊 Performance
-
-| Metric | Target | Achieved |
-|--------|--------|----------|
-| **Response Time** | < 50ms | < 10ms |
-| **Throughput** | 1000+ TPS | Load tested |
-| **Test Coverage** | 100% | All components |
-
-## 🔧 Configuration
-
-Environment variables can be set in `.env` file:
-
-```env
-# Database
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=password
-POSTGRES_DB=utxo_indexer
-DATABASE_URL=postgres://postgres:password@localhost:5432/utxo_indexer
-
-# API
-PORT=3000
-NODE_ENV=development
-```
-
-## 📚 Documentation
-
-- **[Question_Readme.md](./Question_Readme.md)** - Original challenge requirements
-- **[Design.md](./Design.md)** - Architecture and technical design
-- **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** - Production implementation guide
-- **[CODE_TOUR.md](./CODE_TOUR.md)** - Complete code walkthrough
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Run the test suite
-6. Submit a pull request
-
-## 📄 License
-
-This project is built for the EMURGO Backend Engineer Challenge.
+## Contact
+For questions or support, please contact the project maintainer. 

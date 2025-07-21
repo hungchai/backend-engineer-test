@@ -14,10 +14,14 @@
     "idleTimeoutMs": 30000,
     "connectionTimeoutMs": 5000
   },
+  "redis": {
+    "url": "redis://localhost:6379"
+  },
   "cache": {
     "enabled": false,
     "ttlSeconds": 300,
-    "maxMemoryMB": 100
+    "maxMemoryMB": 100,
+    // Redis is used for cache
   },
   "indexer": {
     "maxRollbackDepth": 2000,

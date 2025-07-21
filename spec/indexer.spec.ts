@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from 'crypto';
 import { UTXOIndexer } from '../src/indexer';
+import { createRedisClient, withAddressLock } from '../src/redis';
 import type { Block, Transaction } from '../src/types';
 import { cleanupTestDatabase, initializeTestDatabase } from './db-init';
 import { setupTestDatabase, teardownTestDatabase } from './test-setup';
@@ -8,32 +9,40 @@ import { setupTestDatabase, teardownTestDatabase } from './test-setup';
 describe('UTXO Blockchain Indexer', () => {
   let indexer: UTXOIndexer;
   let testDb: any;
+  let redis: ReturnType<typeof createRedisClient>;
 
   beforeAll(async () => {
     testDb = await setupTestDatabase();
+    redis = createRedisClient('redis://localhost:6379');
     const dbConfig = {
       connectionString: 'postgresql://postgres:password@localhost:5432/utxo_indexer',
-      poolSize: 5,
+      maxConnections: 5,
+      idleTimeoutMs: 30000,
+      connectionTimeoutMs: 5000
     };
-    const indexerConfig = { database: dbConfig };
-    indexer = new UTXOIndexer(indexerConfig as any);
+    const indexerConfig = { database: dbConfig, redis: { url: 'redis://localhost:6379' }, cache: { enabled: false, ttlSeconds: 300, maxMemoryMB: 100 }, maxRollbackDepth: 2000, batchSize: 1000, enableMetrics: true, server: { port: 3000, host: 'localhost' }, logging: { level: 'info', prettyPrint: true } };
+    indexer = new UTXOIndexer(indexerConfig as any, redis);
     await indexer.initialize();
   });
 
   afterAll(async () => {
     await indexer.close();
     await teardownTestDatabase(testDb);
+    try {
+      await redis.quit();
+    } catch (e) { }
   });
 
   beforeEach(async () => {
     await initializeTestDatabase(testDb.client);
     const dbConfig = {
       connectionString: 'postgresql://postgres:password@localhost:5432/utxo_indexer',
-      poolSize: 5,
+      maxConnections: 5,
+      idleTimeoutMs: 30000,
+      connectionTimeoutMs: 5000
     };
-    const indexerConfig = { database: dbConfig };
-    indexer = new UTXOIndexer(indexerConfig as any);
-    // await indexer.initialize();
+    const indexerConfig = { database: dbConfig, redis: { url: 'redis://localhost:6379' }, cache: { enabled: false, ttlSeconds: 300, maxMemoryMB: 100 }, maxRollbackDepth: 2000, batchSize: 1000, enableMetrics: true, server: { port: 3000, host: 'localhost' }, logging: { level: 'info', prettyPrint: true } };
+    indexer = new UTXOIndexer(indexerConfig as any, redis);
     await cleanupTestDatabase(testDb.client);
   });
 
@@ -145,5 +154,39 @@ describe('UTXO Blockchain Indexer', () => {
       }]);
       await expect(indexer.processBlock(invalidBlock)).rejects.toThrow('Transaction balance mismatch');
     });
+  });
+});
+
+describe('Distributed Lock (Redis)', () => {
+  let redis: ReturnType<typeof createRedisClient>;
+  beforeAll(() => {
+    redis = createRedisClient('redis://localhost:6379');
+  });
+  afterAll(async () => {
+    try {
+      await redis.quit();
+    } catch (e) { }
+  });
+  test('should acquire and release lock for the same address', async () => {
+    let lockAcquired = false;
+    await withAddressLock(redis, 'test-address', async () => {
+      lockAcquired = true;
+    });
+    expect(lockAcquired).toBe(true);
+  });
+  test('should not allow concurrent lock for the same address', async () => {
+    let firstLock = false;
+    let secondLockError: Error | null = null;
+    await withAddressLock(redis, 'test-concurrent', async () => {
+      firstLock = true;
+      try {
+        await withAddressLock(redis, 'test-concurrent', async () => { });
+      } catch (err) {
+        secondLockError = err as Error;
+      }
+    });
+    expect(firstLock).toBe(true);
+    expect(secondLockError).not.toBeNull();
+    expect(secondLockError?.message).toMatch(/Could not acquire lock/);
   });
 }); 

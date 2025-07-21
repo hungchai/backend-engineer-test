@@ -1,26 +1,14 @@
 {
-  "server": {
-    "port": 3101,
-    "host": "0.0.0.0"
-  },
-  "database": {
-    "poolSize": 25,
-    "maxConnections": 50,
-    "idleTimeoutMs": 60000,
-    "connectionTimeoutMs": 10000
-  },
   "cache": {
     "enabled": true,
     "ttlSeconds": 600,
     "maxMemoryMB": 512
+    // Redis is used for cache
   },
-  "indexer": {
-    "maxRollbackDepth": 5000,
-    "batchSize": 2000,
-    "enableMetrics": true
+  "redis": {
+    "url": "redis://redis:6379"
   },
   "logging": {
-    "level": "warn",
     "prettyPrint": false
   }
 }

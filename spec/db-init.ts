@@ -9,7 +9,8 @@ export async function initializeTestDatabase(client: Client): Promise<void> {
     CREATE TABLE blocks (
       id TEXT PRIMARY KEY,
       height BIGINT UNIQUE NOT NULL,
-      created_at TIMESTAMP DEFAULT NOW()
+      created_at TIMESTAMP DEFAULT NOW(),
+      voided BIGINT
     )
   `);
 
@@ -18,7 +19,8 @@ export async function initializeTestDatabase(client: Client): Promise<void> {
     CREATE TABLE transactions (
       id TEXT PRIMARY KEY,
       block_id TEXT NOT NULL REFERENCES blocks(id) ON DELETE CASCADE,
-      block_height BIGINT NOT NULL
+      block_height BIGINT NOT NULL,
+      voided BIGINT
     )
   `);
 
@@ -32,6 +34,7 @@ export async function initializeTestDatabase(client: Client): Promise<void> {
       spent BOOLEAN DEFAULT FALSE,
       spent_in_tx TEXT,
       block_height BIGINT NOT NULL,
+      voided BIGINT,
       PRIMARY KEY (tx_id, output_index)
     )
   `);

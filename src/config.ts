@@ -33,6 +33,9 @@ interface ConfigFile {
     level?: string;
     prettyPrint?: boolean;
   };
+  redis?: {
+    url?: string;
+  };
 }
 
 class ConfigurationManager {
@@ -87,6 +90,7 @@ class ConfigurationManager {
   private applyEnvironmentVariables(config: ConfigFile): IndexerConfig {
     // Build database connection string
     const dbConfig = config.database || {};
+    const redisConfig = config.redis || {};
     const connectionString = process.env.DATABASE_URL ||
       `postgresql://${dbConfig.username || 'postgres'}:${dbConfig.password || 'password'}@${dbConfig.host || 'localhost'}:${dbConfig.port || 5432}/${dbConfig.database || 'utxo_indexer'}`;
 
@@ -97,10 +101,12 @@ class ConfigurationManager {
       },
       database: {
         connectionString,
-        poolSize: parseInt(process.env.DB_POOL_SIZE || '') || dbConfig.poolSize || 10,
         maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS || '') || dbConfig.maxConnections || 20,
         idleTimeoutMs: parseInt(process.env.DB_IDLE_TIMEOUT || '') || dbConfig.idleTimeoutMs || 30000,
         connectionTimeoutMs: parseInt(process.env.DB_CONNECTION_TIMEOUT || '') || dbConfig.connectionTimeoutMs || 5000
+      },
+      redis: {
+        url: process.env.REDIS_URL || redisConfig.url || 'redis://localhost:6379'
       },
       cache: {
         enabled: process.env.CACHE_ENABLED === 'true' || config.cache?.enabled || false,
@@ -138,8 +144,8 @@ class ConfigurationManager {
       errors.push('Database connection string is required');
     }
 
-    if (this.config.database.poolSize <= 0) {
-      errors.push('Database pool size must be greater than 0');
+    if (this.config.database.maxConnections <= 0) {
+      errors.push('Database max connections must be greater than 0');
     }
 
     if (this.config.maxRollbackDepth <= 0) {

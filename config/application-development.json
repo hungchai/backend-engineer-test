@@ -1,21 +1,14 @@
 {
-  "server": {
-    "port": 3000
-  },
-  "database": {
-    "host": "localhost",
-    "poolSize": 5,
-    "maxConnections": 10
-  },
   "cache": {
-    "enabled": false
+    "enabled": false,
+    "ttlSeconds": 300,
+    "maxMemoryMB": 100
+    // Redis is used for cache
   },
-  "indexer": {
-    "batchSize": 100,
-    "enableMetrics": true
+  "redis": {
+    "url": "redis://localhost:6379"
   },
   "logging": {
-    "level": "debug",
-    "prettyPrint": true
+    "level": "debug"
   }
 }

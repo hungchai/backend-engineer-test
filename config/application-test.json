@@ -7,8 +7,14 @@
     "poolSize": 2,
     "maxConnections": 5
   },
+  "redis": {
+    "url": "redis://localhost:6379"
+  },
   "cache": {
-    "enabled": false
+    "enabled": false,
+    "ttlSeconds": 60,
+    "maxMemoryMB": 50
+    // Redis is used for cache
   },
   "indexer": {
     "maxRollbackDepth": 100,
@@ -16,7 +22,7 @@
     "enableMetrics": false
   },
   "logging": {
-    "level": "error",
+    "level": "warn",
     "prettyPrint": false
   }
 }

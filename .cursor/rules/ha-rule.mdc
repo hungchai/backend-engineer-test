@@ -1,6 +1,8 @@
 ---
 alwaysApply: true
 ---
+use claude 4 model
+question_readme.md is requirement
 stateless
 high performace
 low latency

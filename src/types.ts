@@ -110,9 +110,12 @@ export interface ServerConfig {
   host: string;
 }
 
+export interface RedisConfig {
+  url: string;
+}
+
 export interface DatabaseConfig {
   connectionString: string;
-  poolSize: number;
   maxConnections: number;
   idleTimeoutMs: number;
   connectionTimeoutMs: number;
@@ -133,6 +136,7 @@ export interface LoggingConfig {
 export interface IndexerConfig {
   server: ServerConfig;
   database: DatabaseConfig;
+  redis: RedisConfig;
   cache: CacheConfig;
   maxRollbackDepth: number;
   batchSize: number;

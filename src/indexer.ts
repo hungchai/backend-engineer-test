@@ -1,3 +1,4 @@
+import type Redis from 'ioredis';
 import { Database } from './database.js';
 import type {
   Block,
@@ -21,9 +22,9 @@ export class UTXOIndexer {
     balancesUpdated: 0
   };
 
-  constructor(config: IndexerConfig) {
+  constructor(config: IndexerConfig, redis?: Redis) {
     this.config = config;
-    this.database = new Database(config.database);
+    this.database = new Database(config.database, redis!);
     this.validator = new BlockValidator(this.database);
   }
 
