@@ -29,7 +29,7 @@ export async function setupTestDatabase() {
     console.log('✅ Test database setup complete');
     return { client };
   } catch (error) {
-    console.error('❌ Failed to connect to test database', error);
+    console.error('Failed to connect to test database', error);
     throw error;
   }
 }
