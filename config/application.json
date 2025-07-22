@@ -18,10 +18,9 @@
     "url": "redis://localhost:6379"
   },
   "cache": {
-    "enabled": false,
+    "enabled": true,
     "ttlSeconds": 300,
-    "maxMemoryMB": 100,
-    // Redis is used for cache
+    "maxMemoryMB": 100
   },
   "indexer": {
     "maxRollbackDepth": 2000,

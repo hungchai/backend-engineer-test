@@ -360,6 +360,40 @@ export class Database {
     this.redis.disconnect();
   }
 
+  // Clear all data (for development/testing)
+  async clearAll(): Promise<{ blocksRemoved: number, transactionsRemoved: number, utxosRemoved: number, addressesRemoved: number }> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Count records before deletion
+      const blockCount = await client.query('SELECT COUNT(*) FROM blocks');
+      const txCount = await client.query('SELECT COUNT(*) FROM transactions');
+      const utxoCount = await client.query('SELECT COUNT(*) FROM utxos');
+      const addressCount = await client.query('SELECT COUNT(*) FROM address_balances');
+
+      // Clear all tables in correct order (respecting foreign key constraints)
+      await client.query('DELETE FROM utxos');
+      await client.query('DELETE FROM transactions');
+      await client.query('DELETE FROM blocks');
+      await client.query('DELETE FROM address_balances');
+
+      await client.query('COMMIT');
+
+      return {
+        blocksRemoved: Number(blockCount.rows[0].count),
+        transactionsRemoved: Number(txCount.rows[0].count),
+        utxosRemoved: Number(utxoCount.rows[0].count),
+        addressesRemoved: Number(addressCount.rows[0].count)
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   // Health check
   async ping(): Promise<boolean> {
     try {

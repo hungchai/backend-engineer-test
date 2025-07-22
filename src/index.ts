@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import config, { configManager } from './config.js';
 import { UTXOIndexer } from './indexer.js';
+import { createRedisClient } from './redis.js';
 import type {
   APIError,
   BalanceResponse,
@@ -199,15 +200,38 @@ fastify.get('/config', async (request, reply) => {
         ...config.database,
         connectionString: config.database.connectionString.replace(/\/\/.*:.*@/, '//***:***@')
       },
-      cache: config.cache,
-      indexer: {
-        maxRollbackDepth: config.maxRollbackDepth,
-        batchSize: config.batchSize,
-        enableMetrics: config.enableMetrics
-      },
-      logging: config.logging
+      cache: config.cache
     }
   });
+});
+
+// DELETE /clear - Clear all blocks, transactions, and UTXOs (development only)
+fastify.delete('/clear', async (request, reply) => {
+  if (configManager.getEnvironment() === 'production') {
+    return reply.status(404).send({
+      statusCode: 404,
+      error: 'Not Found',
+      message: 'Clear endpoint not available in production'
+    } as APIError);
+  }
+
+  try {
+    const result = await indexer.clearAll();
+
+    return reply.status(200).send({
+      message: 'Database cleared successfully',
+      result
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+    return reply.status(500).send({
+      statusCode: 500,
+      error: 'Internal Server Error',
+      message: errorMessage
+    } as APIError);
+  }
 });
 
 // GET / - Basic API info
@@ -273,8 +297,11 @@ async function bootstrap() {
     fastify.log.info(`Starting UTXO Blockchain Indexer in ${configManager.getEnvironment()} mode...`);
     fastify.log.info(`Server will listen on ${config.server.host}:${config.server.port}`);
 
+    // Create Redis client if cache is enabled
+    const redis = config.cache.enabled ? createRedisClient(config.redis.url) : undefined;
+
     // Initialize indexer
-    indexer = new UTXOIndexer(config);
+    indexer = new UTXOIndexer(config, redis);
     await indexer.initialize();
 
     fastify.log.info('Database initialized successfully');
