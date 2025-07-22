@@ -163,5 +163,5 @@ class ConfigurationManager {
 // Singleton instance
 const configManager = new ConfigurationManager();
 
-export { configManager, ConfigurationManager };
+export { ConfigurationManager, configManager };
 export default configManager.getConfig(); 

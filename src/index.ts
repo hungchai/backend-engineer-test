@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import config, { configManager } from './config.js';
 import { UTXOIndexer } from './indexer.js';
+import { createRedisClient } from './redis.js';
 import type {
   APIError,
   BalanceResponse,
@@ -273,8 +274,11 @@ async function bootstrap() {
     fastify.log.info(`Starting UTXO Blockchain Indexer in ${configManager.getEnvironment()} mode...`);
     fastify.log.info(`Server will listen on ${config.server.host}:${config.server.port}`);
 
+    // Create Redis client if cache is enabled
+    const redis = config.cache.enabled ? createRedisClient(config.redis.url) : undefined;
+
     // Initialize indexer
-    indexer = new UTXOIndexer(config);
+    indexer = new UTXOIndexer(config, redis);
     await indexer.initialize();
 
     fastify.log.info('Database initialized successfully');
