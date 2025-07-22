@@ -9,11 +9,17 @@ A high-performance, stateless blockchain indexer for tracking UTXO (Unspent Tran
    git clone <repository-url>
    cd backend-engineer-test
    ```
-2. **Start services (Docker recommended):**
+2. **Start only database and redis services:**
    ```bash
-   docker-compose up -d --build
+   docker-compose up -d db redis
    ```
-3. **Check API health:**
+3. **Run the app:**
+   ```bash
+   bun run src/index.ts
+   # or
+   bun start
+   ```
+4. **Check API health:**
    ```bash
    curl http://localhost:3000/health
    ```
@@ -37,27 +43,42 @@ A high-performance, stateless blockchain indexer for tracking UTXO (Unspent Tran
 - **docker-compose.yaml**: Local development and test orchestration for DB, Redis, and API.
 
 ## API Endpoints
-| Method | Endpoint                | Description                  |
-|--------|-------------------------|------------------------------|
-| POST   | `/blocks`               | Process a new block          |
-| GET    | `/balance/:address`     | Get address balance          |
-| POST   | `/rollback?height=N`    | Rollback to specific height  |
-| GET    | `/health`               | System health check          |
-| GET    | `/metrics`              | Performance metrics          |
+| Method | Endpoint                | Description                              |
+|--------|-------------------------|------------------------------------------|
+| POST   | `/blocks`               | Process a new block                      |
+| GET    | `/balance/:address`     | Get address balance                      |
+| POST   | `/rollback?height=N`    | Rollback to specific height              |
+| GET    | `/health`               | System health check                      |
+| GET    | `/metrics`              | Performance metrics                      |
+| DELETE | `/clear`                | **Development only:** Clear all data     |
 
-## Test Cases
-| Test Category         | Description                                                      |
-|----------------------|------------------------------------------------------------------|
-| Block Processing     | Validates and processes blocks, including all schema/business rules|
-| Balance Queries      | Ensures correct balance calculation for any address               |
-| Rollback            | Verifies rollback to a specific height and state restoration      |
-| Validation          | Tests for invalid heights, hashes, and unbalanced transactions    |
-| Distributed Lock    | Confirms Redis-based address-level locking and race prevention    |
-| API Connectivity    | Ensures API and DB are reachable and healthy                      |
-| Test Isolation      | Distributed lock tests use a dedicated Redis client               |
+## Development Database Reset
+- **DELETE /clear**: Resets all blocks, transactions, UTXOs, and address balances. Only available in development mode. Useful for testing and resetting state between test runs.
+- Example:
+  ```bash
+  curl -X DELETE http://localhost:3000/clear
+  ```
+- This endpoint is used at the start of `api-test.http` to ensure a clean state for tests.
 
-## [Production Architecture](./backend-engineer-test-cluster/README.md)
-See the [Production Architecture Guide](./backend-engineer-test-cluster/README.md) for a detailed description of the production-ready cluster, infrastructure, and scaling.
+## Block Hash Calculation for Tests
+- Block hash is calculated as: `SHA256(height + tx1.id + tx2.id + ...)`
+- For example, for a genesis block with height 1 and transaction id "tx1":
+  ```js
+  // Node.js
+  require('crypto').createHash('sha256').update('1tx1').digest('hex')
+  // => d1582b9e2cac15e170c39ef2e85855ffd7e6a820550a8ca16a2f016d366503dc
+  ```
+- All block hashes in `api-test.http` are precomputed using this method.
+
+## API Test Workflow
+- Use the [api-test.http](./api-test.http) file with the REST Client extension or similar tools.
+- The first request is `DELETE /clear` to reset the database.
+- All subsequent requests assume a clean state and use correct block hashes.
+- Example workflow:
+  1. `DELETE /clear` (reset DB)
+  2. `POST /blocks` (add genesis block)
+  3. `GET /balance/addr1` (verify balance)
+  4. Continue with other tests...
 
 ## Testing
 1. **Start dependencies (if not running):**
@@ -71,6 +92,12 @@ See the [Production Architecture Guide](./backend-engineer-test-cluster/README.m
 3. **Run tests in watch mode:**
    ```bash
    bun test:watch
+   ```
+4. **Run the app for manual testing:**
+   ```bash
+   bun run src/index.ts
+   # or
+   bun start
    ```
 
 ## Mapping to Challenge Requirements (from Question_Readme.md)

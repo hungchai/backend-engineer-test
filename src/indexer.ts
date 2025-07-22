@@ -192,4 +192,12 @@ export class UTXOIndexer {
   async close(): Promise<void> {
     await this.database.close();
   }
+
+  async clearAll(): Promise<{ blocksRemoved: number, transactionsRemoved: number, utxosRemoved: number, addressesRemoved: number }> {
+    try {
+      return await this.database.clearAll();
+    } catch (error) {
+      throw new Error(`Failed to clear all data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 } 
